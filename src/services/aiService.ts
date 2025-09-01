@@ -35,7 +35,7 @@ export class AIService {
 
   private models = {
     auto: "deepseek/deepseek-chat-v3.1:free",
-    code: "qwen/qwen3-coder:free",
+    code: "deepseek/deepseek-chat-v3.1:free",
     creative: "deepseek/deepseek-chat-v3.1:free",
     knowledge: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
     general: "mistralai/mistral-nemo:free",
