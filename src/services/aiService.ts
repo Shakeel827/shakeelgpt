@@ -12,22 +12,31 @@ export interface AIResponse {
   error?: string;    // error message if the request fails
 }
 
+// Simple in-memory cache for API responses
+interface ResponseCache {
+  [key: string]: { response: AIResponse; timestamp: number };
+}
+
+const RESPONSE_CACHE: ResponseCache = {};
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+
 export class AIService {
   private apiKey: string;
   private baseUrl = "https://openrouter.ai/api/v1";
+  private abortController: AbortController | null = null;
 
   constructor() {
-    // Try to get API key from environment variables
+    // For Vercel deployment, the environment variable should be available at build time
     this.apiKey = import.meta.env.VITE_API_KEY || '';
     
-    // If not found in environment, try to load from key.env
+    // For local development, fall back to window._env_ if available
     if (!this.apiKey && typeof window !== 'undefined') {
       // @ts-ignore - Access window._env_ if it exists
       this.apiKey = window._env_?.VITE_API_KEY || '';
     }
     
     if (!this.apiKey) {
-      console.error('❌ OpenRouter API key not found. Please set VITE_API_KEY in your environment variables or key.env file.');
+      console.error('❌ OpenRouter API key not found. Please set VITE_API_KEY in your Vercel environment variables.');
     } else {
       console.log('✅ OpenRouter API key loaded successfully');
     }
@@ -42,34 +51,48 @@ export class AIService {
     image: "google/gemini-2.5-flash-image-preview:free"
   };
 
-  // Local spell checker fallback
-  private enhancedSpellCheck(text: string): string {
-    if (!text) return "";
-    const corrections: Record<string, string> = {
-      'teh': 'the', 'recieve': 'receive', 'seperate': 'separate',
-      'definately': 'definitely', 'occured': 'occurred', 'neccessary': 'necessary',
-      'accomodate': 'accommodate', 'begining': 'beginning', 'beleive': 'believe',
-      'calender': 'calendar', 'cemetary': 'cemetery', 'changable': 'changeable',
-      'collegue': 'colleague', 'comming': 'coming', 'commited': 'committed',
-      'concious': 'conscious', 'definite': 'definite', 'embarass': 'embarrass',
-      'enviroment': 'environment', 'existance': 'existence', 'experiance': 'experience',
-      'familar': 'familiar', 'finaly': 'finally', 'foriegn': 'foreign',
-      'goverment': 'government', 'grammer': 'grammar', 'independant': 'independent',
-      'intergrate': 'integrate', 'knowlege': 'knowledge', 'maintainance': 'maintenance',
-      'occassion': 'occasion', 'persue': 'pursue', 'priviledge': 'privilege',
-      'recomend': 'recommend', 'refered': 'referred', 'relevent': 'relevant',
-      'responsable': 'responsible', 'succesful': 'successful', 'tommorow': 'tomorrow',
-      'truely': 'truly', 'untill': 'until', 'usefull': 'useful', 'wierd': 'weird',
-      'writting': 'writing'
+  // Create a cache key from the messages and service type
+  private getCacheKey(messages: AIMessage[], serviceType: string): string {
+    return `${serviceType}:${JSON.stringify(messages)}`;
+  }
+
+  // Check if cached response is still valid
+  private getCachedResponse(cacheKey: string): AIResponse | null {
+    const cached = RESPONSE_CACHE[cacheKey];
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.response;
+    }
+    return null;
+  }
+
+  // Store response in cache
+  private cacheResponse(cacheKey: string, response: AIResponse): void {
+    RESPONSE_CACHE[cacheKey] = {
+      response,
+      timestamp: Date.now()
     };
+  }
+
+  // Simplified spell checker - only corrects obvious errors
+  private quickSpellCheck(text: string): string {
+    if (!text) return "";
+    
+    // Only fix the most common errors to save processing time
+    const quickCorrections: Record<string, string> = {
+      'teh': 'the', 
+      'recieve': 'receive', 
+      'seperate': 'separate',
+      'definately': 'definitely', 
+      'neccessary': 'necessary',
+      'accomodate': 'accommodate'
+    };
+    
     let corrected = text;
-    Object.entries(corrections).forEach(([wrong, right]) => {
+    Object.entries(quickCorrections).forEach(([wrong, right]) => {
       const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
       corrected = corrected.replace(regex, right);
     });
-    corrected = corrected.replace(/\bi\b/g, 'I');
-    corrected = corrected.replace(/(^|[.!?]\s+)([a-z])/g, (m, p1, p2) => p1 + p2.toUpperCase());
-    if (corrected && !/[.!?]$/.test(corrected.trim())) corrected += ".";
+    
     return corrected;
   }
 
@@ -78,12 +101,27 @@ export class AIService {
     return this.models[serviceType as keyof typeof this.models] || this.models.auto;
   }
 
-  // Send message to OpenRouter AI
+  // Cancel any ongoing request
+  cancelRequest(): void {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+  }
+
+  // Optimized message sending with timeout and caching
   async sendMessage(messages: AIMessage[], serviceType: string = 'auto'): Promise<AIResponse> {
+    // Check cache first
+    const cacheKey = this.getCacheKey(messages, serviceType);
+    const cachedResponse = this.getCachedResponse(cacheKey);
+    if (cachedResponse) {
+      console.log('✅ Using cached response');
+      return cachedResponse;
+    }
+
     try {
       // Check if API key is available
       if (!this.apiKey) {
-        console.error('❌ Cannot send message: No API key available');
         throw new Error('API key not configured');
       }
 
@@ -91,36 +129,44 @@ export class AIService {
       const hasImage = !!lastMessage.image;
       const isImageGeneration = /generate.*image|create.*image|make.*image|draw|picture|photo/i.test(lastMessage.content);
       const selectedModel = this.getModel(serviceType, hasImage);
-      
-      console.log('📡 Sending message to AI service:', {
-        serviceType,
-        model: selectedModel,
-        hasImage,
-        isImageGeneration,
-        messageCount: messages.length
-      });
 
-      // Image generation fallback
+      // Image generation fallback - use a faster service
       if (isImageGeneration && !hasImage) {
         const prompt = lastMessage.content.replace(/generate|create|make|draw/gi, '').trim();
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=768&height=768&seed=${Date.now()}&enhance=true`;
-        return {
+        // Use a faster image generation service
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${Date.now()}`;
+        const response = {
           content: `I've generated an image for: "${prompt}". Here's your custom AI-generated image!`,
-          model: 'Pollinations AI',
+          model: 'Pollinations AI (Fast)',
           imageUrl
         };
+        this.cacheResponse(cacheKey, response);
+        return response;
       }
 
+      // Prepare API messages with limited history for faster processing
       const apiMessages = [
-        { role: 'system', content: "You are PandaNexus, an advanced AI assistant created by Shakeel. Provide accurate and helpful responses." },
-        ...messages.slice(-5).map(msg => ({
+        { 
+          role: 'system', 
+          content: "You are PandaNexus, an advanced AI assistant. Provide concise and helpful responses." 
+        },
+        // Only include the last 2 messages to reduce payload size
+        ...messages.slice(-2).map(msg => ({
           role: msg.role,
           content: msg.image ? [
-            { type: "text", text: this.enhancedSpellCheck(msg.content) },
+            { type: "text", text: this.quickSpellCheck(msg.content) },
             { type: "image_url", image_url: { url: msg.image } }
-          ] : this.enhancedSpellCheck(msg.content)
+          ] : this.quickSpellCheck(msg.content)
         }))
       ];
+
+      // Set up abort controller for timeout
+      this.abortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        if (this.abortController) {
+          this.abortController.abort();
+        }
+      }, 15000); // 15 second timeout
 
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
@@ -133,76 +179,60 @@ export class AIService {
         body: JSON.stringify({
           model: selectedModel,
           messages: apiMessages,
-          temperature: serviceType === 'creative' ? 0.8 : serviceType === 'code' ? 0.3 : 0.7,
-          max_tokens: 2000,
-          top_p: 0.9,
+          // Optimize parameters for faster response
+          temperature: serviceType === 'creative' ? 0.7 : serviceType === 'code' ? 0.2 : 0.5,
+          max_tokens: 1000, // Reduced from 2000 for faster responses
+          top_p: 0.8,
           frequency_penalty: 0.1,
-          presence_penalty: 0.1
-        })
+          presence_penalty: 0.1,
+          stream: false // Ensure we're not using streaming which can be slower
+        }),
+        signal: this.abortController.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`❌ API request failed with status ${response.status}:`, errorText);
         throw new Error(`API request failed: ${response.status} - ${errorText}`);
       }
       
       const data = await response.json();
-      console.log('✅ Received AI response:', {
-        model: data.model,
-        usage: data.usage,
-        contentLength: data.choices?.[0]?.message?.content?.length || 0
-      });
-
-      return {
+      
+      const aiResponse = {
         content: data.choices?.[0]?.message?.content || lastMessage.content,
         model: data.model || selectedModel,
         imageUrl: lastMessage.image
       };
-    } catch (error) {
+
+      // Cache the successful response
+      this.cacheResponse(cacheKey, aiResponse);
+      
+      return aiResponse;
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        return {
+          content: "Request timed out. Please try again with a more specific question.",
+          model: 'Error',
+          error: "Request timeout"
+        };
+      }
+      
       console.error("❌ AIService Error:", error);
       return {
-        content: "I'm having trouble connecting to the AI service. Please check your internet connection and try again. If the problem persists, the service might be temporarily unavailable.",
+        content: "I'm having trouble connecting to the AI service. Please check your internet connection and try again.",
         model: 'Error',
-        error: error instanceof Error ? error.message : String(error)
+        error: error.message
       };
+    } finally {
+      this.abortController = null;
     }
   }
 
-  // Spell check using OpenRouter AI as backup
+  // Fast spell check - only use local corrections
   async spellCheck(text: string): Promise<string> {
-    try {
-      const localCorrection = this.enhancedSpellCheck(text);
-      if (localCorrection !== text) return localCorrection;
-
-      // API spell check
-      const apiResponse = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://pandanexus.dev',
-          'X-Title': 'PandaNexus Spell Checker'
-        },
-        body: JSON.stringify({
-          model: this.models.general,
-          messages: [
-            { role: 'system', content: 'Correct spelling, grammar, and punctuation. Return ONLY the corrected text.' },
-            { role: 'user', content: text }
-          ],
-          temperature: 0.1,
-          max_tokens: 500
-        })
-      });
-
-      if (!apiResponse.ok) throw new Error(`Spell check API failed: ${apiResponse.status}`);
-      const data = await apiResponse.json();
-      return data.choices?.[0]?.message?.content || localCorrection;
-
-    } catch (error) {
-      console.error("Spell check error:", error);
-      return this.enhancedSpellCheck(text);
-    }
+    // Skip API spell check for speed, use local correction only
+    return this.quickSpellCheck(text);
   }
 }
 
