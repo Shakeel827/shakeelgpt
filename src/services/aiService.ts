@@ -12,13 +12,15 @@ export interface AIResponse {
   error?: string;
 }
 
-// Advanced response caching with LRU eviction
-class ResponseCache {
-  private cache: Map<string, { response: AIResponse; timestamp: number; expires: number }>;
+// Smart response cache with adaptive TTL
+class SmartResponseCache {
+  private cache: Map<string, { response: AIResponse; timestamp: number; ttl: number }>;
+  private hitCount: Map<string, number>;
   private maxSize: number;
 
   constructor(maxSize: number = 100) {
     this.cache = new Map();
+    this.hitCount = new Map();
     this.maxSize = maxSize;
   }
 
@@ -27,47 +29,76 @@ class ResponseCache {
     if (!item) return null;
 
     // Check if expired
-    if (Date.now() > item.expires) {
+    if (Date.now() > item.timestamp + item.ttl) {
       this.cache.delete(key);
+      this.hitCount.delete(key);
       return null;
     }
 
-    // Move to front (most recently used)
-    this.cache.delete(key);
-    this.cache.set(key, item);
+    // Update hit count
+    const hits = this.hitCount.get(key) || 0;
+    this.hitCount.set(key, hits + 1);
     
     return item.response;
   }
 
-  set(key: string, response: AIResponse, ttl: number = 5 * 60 * 1000): void {
-    // Evict if needed (LRU)
+  set(key: string, response: AIResponse, baseTtl: number = 5 * 60 * 1000): void {
+    // Adaptive TTL based on response characteristics
+    let ttl = baseTtl;
+    const content = response.content;
+    
+    // Longer TTL for factual responses, shorter for creative ones
+    if (content.length > 300) ttl = Math.min(ttl, 3 * 60 * 1000); // Shorter for long responses
+    if (content.includes('I think') || content.includes('in my opinion')) ttl = 2 * 60 * 1000;
+    
+    // Evict least frequently used if needed
     if (this.cache.size >= this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey) this.cache.delete(firstKey);
+      let lfuKey: string | null = null;
+      let minHits = Infinity;
+      
+      for (const [key, hits] of this.hitCount.entries()) {
+        if (hits < minHits) {
+          minHits = hits;
+          lfuKey = key;
+        }
+      }
+      
+      if (lfuKey) {
+        this.cache.delete(lfuKey);
+        this.hitCount.delete(lfuKey);
+      }
     }
 
     this.cache.set(key, {
       response,
       timestamp: Date.now(),
-      expires: Date.now() + ttl
+      ttl
     });
+    
+    // Initialize hit count
+    if (!this.hitCount.has(key)) {
+      this.hitCount.set(key, 0);
+    }
   }
 }
 
-const responseCache = new ResponseCache(200);
+const responseCache = new SmartResponseCache(150);
 
-// Connection pool simulation
-const connectionPool: Array<{ lastUsed: number; inUse: boolean }> = [];
-for (let i = 0; i < 5; i++) {
-  connectionPool.push({ lastUsed: 0, inUse: false });
-}
+// Common response patterns for instant replies
+const instantResponses: {pattern: RegExp, response: string}[] = [
+  { pattern: /^(hello|hi|hey|greetings|good morning|good afternoon|good evening)/i, response: "Hello! I'm PandaNexus AI, created by Shakeel. How can I assist you today?" },
+  { pattern: /^(thanks|thank you|appreciate it|cheers)/i, response: "You're welcome! Is there anything else I can help you with?" },
+  { pattern: /^(how are you|how's it going|how do you do)/i, response: "I'm functioning well, thank you for asking! How can I help you today?" },
+  { pattern: /^(what can you do|what are your capabilities|help)/i, response: "I can answer questions, help with research, generate ideas, and even create images. What would you like me to help you with?" },
+  { pattern: /^(who are you|what are you|introduce yourself)/i, response: "I'm PandaNexus, an advanced AI assistant created by Shakeel. I'm here to help answer your questions and assist with various tasks." },
+  { pattern: /^(bye|goodbye|see you|farewell)/i, response: "Goodbye! Feel free to return if you have more questions." }
+];
 
 export class AIService {
   private apiKey: string;
   private baseUrl = "https://openrouter.ai/api/v1";
   private abortController: AbortController | null = null;
   private connectionTested = false;
-  private preWarmPromise: Promise<void> | null = null;
 
   constructor() {
     this.apiKey = import.meta.env.VITE_API_KEY || '';
@@ -96,59 +127,25 @@ export class AIService {
 
   // Pre-warm API connection
   private async preWarmConnection(): Promise<void> {
-    if (this.preWarmPromise) return this.preWarmPromise;
+    if (this.connectionTested) return;
     
-    this.preWarmPromise = (async () => {
-      try {
-        // Create a minimal pre-warm request
-        const controller = new AbortController();
-        setTimeout(() => controller.abort(), 3000);
-        
-        await fetch(`${this.baseUrl}/models`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-          },
-          signal: controller.signal
-        });
-        
-        this.connectionTested = true;
-        console.log('✅ API connection pre-warmed');
-      } catch (error) {
-        console.log('⚠️ Pre-warm failed (non-critical)', error);
-      }
-    })();
-    
-    return this.preWarmPromise;
-  }
-
-  // Get an available connection from pool
-  private getConnection(): number {
-    // Find available connection
-    for (let i = 0; i < connectionPool.length; i++) {
-      if (!connectionPool[i].inUse) {
-        connectionPool[i].inUse = true;
-        connectionPool[i].lastUsed = Date.now();
-        return i;
-      }
-    }
-    
-    // If all busy, return the least recently used
-    let lruIndex = 0;
-    for (let i = 1; i < connectionPool.length; i++) {
-      if (connectionPool[i].lastUsed < connectionPool[lruIndex].lastUsed) {
-        lruIndex = i;
-      }
-    }
-    
-    connectionPool[lruIndex].lastUsed = Date.now();
-    return lruIndex;
-  }
-
-  // Release connection back to pool
-  private releaseConnection(index: number): void {
-    if (index >= 0 && index < connectionPool.length) {
-      connectionPool[index].inUse = false;
+    try {
+      // Create a minimal pre-warm request
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 2000);
+      
+      await fetch(`${this.baseUrl}/models`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+        },
+        signal: controller.signal
+      });
+      
+      this.connectionTested = true;
+      console.log('✅ API connection pre-warmed');
+    } catch (error) {
+      console.log('⚠️ Pre-warm failed (non-critical)', error);
     }
   }
 
@@ -158,7 +155,7 @@ export class AIService {
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      hash = hash & hash;
     }
     return hash.toString();
   }
@@ -173,6 +170,17 @@ export class AIService {
     return this.models[serviceType as keyof typeof this.models] || this.models.auto;
   }
 
+  // Check for instant responses
+  private checkInstantResponse(message: string): string | null {
+    const trimmed = message.trim();
+    for (const {pattern, response} of instantResponses) {
+      if (pattern.test(trimmed)) {
+        return response;
+      }
+    }
+    return null;
+  }
+
   // Cancel any ongoing request
   cancelRequest(): void {
     if (this.abortController) {
@@ -181,9 +189,20 @@ export class AIService {
     }
   }
 
-  // Ultra-fast message sending with multiple optimizations
+  // Optimized message sending with smart caching
   async sendMessage(messages: AIMessage[], serviceType: string = 'auto'): Promise<AIResponse> {
-    // Check cache first with fast hash
+    // Check for instant responses first
+    const lastMessage = messages[messages.length - 1];
+    const instantResponse = this.checkInstantResponse(lastMessage.content);
+    if (instantResponse) {
+      console.log('⚡ Using instant response');
+      return {
+        content: instantResponse,
+        model: 'PandaNexus Instant'
+      };
+    }
+
+    // Check cache
     const cacheKey = this.getCacheKey(messages, serviceType);
     const cachedResponse = responseCache.get(cacheKey);
     if (cachedResponse) {
@@ -196,52 +215,47 @@ export class AIService {
         throw new Error('API key not configured');
       }
 
-      const lastMessage = messages[messages.length - 1];
       const hasImage = !!lastMessage.image;
       const isImageGeneration = /generate.*image|create.*image|make.*image|draw|picture|photo/i.test(lastMessage.content);
       const selectedModel = this.getModel(serviceType, hasImage);
 
-      // Fast image generation with smaller size
+      // Fast image generation
       if (isImageGeneration && !hasImage) {
         const prompt = lastMessage.content.replace(/generate|create|make|draw/gi, '').trim();
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=384&height=384&seed=${Date.now()}`;
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${Date.now()}`;
         const response = {
           content: `I've generated an image for: "${prompt}". Here's your custom AI-generated image!`,
-          model: 'Pollinations AI (Fast)',
+          model: 'Pollinations AI',
           imageUrl
         };
         responseCache.set(cacheKey, response, 2 * 60 * 1000);
         return response;
       }
 
-      // Get connection from pool
-      const connectionId = this.getConnection();
-
-      // Prepare minimal API messages
+      // Prepare API messages with optimized history
       const apiMessages = [
         { 
           role: 'system', 
-          content: "You are PandaNexus. Provide concise responses." 
+          content: "You are PandaNexus, an advanced AI assistant. Provide helpful and concise responses." 
         },
-        // Only include the very last message for maximum speed
-        ...messages.slice(-1).map(msg => ({
+        // Include only relevant message history
+        ...messages.slice(-3).map(msg => ({
           role: msg.role,
           content: msg.image ? [
-            { type: "text", text: msg.content.substring(0, 200) }, // Limit text length
+            { type: "text", text: msg.content },
             { type: "image_url", image_url: { url: msg.image } }
-          ] : msg.content.substring(0, 300) // Limit to 300 chars for speed
+          ] : msg.content
         }))
       ];
 
-      // Set up abort controller with aggressive timeout
+      // Set up abort controller with reasonable timeout
       this.abortController = new AbortController();
       const timeoutId = setTimeout(() => {
         if (this.abortController) {
           this.abortController.abort();
         }
-      }, 4500); // 4.5 second timeout
+      }, 25000); // 25 second timeout
 
-      // Use connection pool and pre-warmed connection
       const startTime = Date.now();
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
@@ -254,10 +268,9 @@ export class AIService {
         body: JSON.stringify({
           model: selectedModel,
           messages: apiMessages,
-          // Optimized for speed
-          temperature: 0.5,
-          max_tokens: 600, // Reduced for faster responses
-          top_p: 0.7,
+          temperature: serviceType === 'creative' ? 0.7 : serviceType === 'code' ? 0.3 : 0.5,
+          max_tokens: 1200,
+          top_p: 0.8,
           frequency_penalty: 0.1,
           presence_penalty: 0.1,
           stream: false
@@ -282,23 +295,14 @@ export class AIService {
         imageUrl: lastMessage.image
       };
 
-      // Cache the successful response with shorter TTL for dynamic content
-      responseCache.set(cacheKey, aiResponse, 2 * 60 * 1000);
+      // Cache the successful response
+      responseCache.set(cacheKey, aiResponse);
       
       return aiResponse;
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        // Try to return a fallback response from cache if timeout
-        const similarCacheKey = this.getCacheKey(messages.slice(-1), serviceType);
-        const fallback = responseCache.get(similarCacheKey);
-        
-        if (fallback) {
-          console.log('⚡ Using fallback cached response after timeout');
-          return fallback;
-        }
-        
         return {
-          content: "I'm working on your request. Please try again in a moment for a faster response.",
+          content: "The request is taking longer than expected. Please try again or rephrase your question.",
           model: 'Error',
           error: "Request timeout"
         };
@@ -306,7 +310,7 @@ export class AIService {
       
       console.error("❌ AIService Error:", error);
       return {
-        content: "I'm optimizing for faster responses. Please try your question again.",
+        content: "I'm experiencing technical difficulties. Please try again in a moment.",
         model: 'Error',
         error: error.message
       };
@@ -317,12 +321,13 @@ export class AIService {
 
   // Fast local-only spell check
   async spellCheck(text: string): Promise<string> {
-    // Ultra-fast correction of only the most common errors
+    // Simple correction of common errors
     const quickCorrections: Record<string, string> = {
       'teh': 'the', 
       'recieve': 'receive', 
       'seperate': 'separate',
-      'definately': 'definitely'
+      'definately': 'definitely',
+      'neccessary': 'necessary'
     };
     
     let corrected = text;
@@ -335,16 +340,3 @@ export class AIService {
 }
 
 export const aiService = new AIService();
-
-// Initialize service with pre-warming
-if (typeof window !== 'undefined') {
-  // Pre-warm on user interaction for better performance
-  const warmOnInteraction = () => {
-    aiService.preWarmConnection();
-    window.removeEventListener('click', warmOnInteraction);
-    window.removeEventListener('touchstart', warmOnInteraction);
-  };
-  
-  window.addEventListener('click', warmOnInteraction);
-  window.addEventListener('touchstart', warmOnInteraction);
-}
