@@ -23,9 +23,9 @@ const StreamingMessage = ({
 }: StreamingMessageProps) => {
   const [showCursor, setShowCursor] = useState(true);
   
-  // Cursor blinking effect - only for active assistant messages
+  // Cursor blinking effect
   useEffect(() => {
-    if (!isActive || message.role !== 'assistant') {
+    if (!isActive || !message.isStreaming) {
       setShowCursor(false);
       return;
     }
@@ -35,11 +35,11 @@ const StreamingMessage = ({
     }, 400);
 
     return () => clearInterval(interval);
-  }, [isActive, message.role]);
+  }, [isActive, message.isStreaming]);
 
   const isCodeBlock = message.content.includes('```');
   const isUser = message.role === 'user';
-  const isStreaming = isActive && message.role === 'assistant' && message.isStreaming;
+  const isStreaming = isActive && message.isStreaming;
 
   return (
     <div className={`flex gap-2 md:gap-3 p-2 md:p-4 animate-fade-in ${isUser ? 'justify-end' : 'justify-start'}`}>
