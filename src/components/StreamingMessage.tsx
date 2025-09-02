@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import PandaLogo from "./PandaLogo";
 import { Badge } from "@/components/ui/badge";
 import { Zap, Brain, Cpu, Sparkles } from "lucide-react";
@@ -14,30 +14,60 @@ interface StreamingMessageProps {
     imageUrl?: string;
   };
   isActive?: boolean;
+  onChunk?: (chunk: string) => void;
+  streamingSpeed?: number;
 }
 
-const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) => {
+const StreamingMessage = ({ 
+  message, 
+  isActive = true, 
+  onChunk,
+  streamingSpeed = 30 
+}: StreamingMessageProps) => {
   const [showCursor, setShowCursor] = useState(true);
-  const [displayedContent, setDisplayedContent] = useState(message.content);
-  const [charCount, setCharCount] = useState(0);
+  const [displayedContent, setDisplayedContent] = useState("");
+  const [isStreaming, setIsStreaming] = useState(isActive);
   
+  // Handle streaming effect
   useEffect(() => {
-    setDisplayedContent(message.content);
-    setCharCount(message.content.length);
-  }, [message.content]);
+    if (!isActive || message.role === 'user') {
+      setDisplayedContent(message.content);
+      setIsStreaming(false);
+      return;
+    }
 
+    setIsStreaming(true);
+    setDisplayedContent("");
+    let index = 0;
+    
+    const interval = setInterval(() => {
+      if (index < message.content.length) {
+        const nextChunk = message.content.substring(0, index + 1);
+        setDisplayedContent(nextChunk);
+        onChunk?.(message.content[index]);
+        index++;
+      } else {
+        clearInterval(interval);
+        setIsStreaming(false);
+      }
+    }, streamingSpeed);
+
+    return () => clearInterval(interval);
+  }, [message.content, isActive, message.role, onChunk, streamingSpeed]);
+
+  // Cursor blinking effect
   useEffect(() => {
-    if (!isActive) {
+    if (!isStreaming) {
       setShowCursor(false);
       return;
     }
 
     const interval = setInterval(() => {
       setShowCursor(prev => !prev);
-    }, 400); // Faster cursor blink
+    }, 400);
 
     return () => clearInterval(interval);
-  }, [isActive]);
+  }, [isStreaming]);
 
   const isCodeBlock = displayedContent.includes('```');
   const isUser = message.role === 'user';
@@ -47,8 +77,8 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
       {!isUser && (
         <div className="flex-shrink-0">
           <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow relative overflow-hidden">
-            <PandaLogo className="w-4 h-4 md:w-6 md:h-6" animate={isActive} />
-            {isActive && (
+            <PandaLogo className="w-4 h-4 md:w-6 md:h-6" animate={isStreaming} />
+            {isStreaming && (
               <>
                 <div className="absolute -inset-1 border-2 border-primary/30 rounded-full animate-spin"></div>
                 <div className="absolute -inset-2 border border-primary/20 rounded-full animate-ping"></div>
@@ -69,10 +99,10 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
         `}>
           
           {/* Enhanced streaming indicators */}
-          {isActive && !isUser && (
+          {isStreaming && (
             <>
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-primary animate-pulse"></div>
-              <div className="absolute top-0 left-0 h-0.5 bg-white/50 animate-shimmer" style={{width: `${Math.min((charCount / 1000) * 100, 100)}%`}}></div>
+              <div className="absolute top-0 left-0 h-0.5 bg-white/50 animate-shimmer" style={{width: `${Math.min((displayedContent.length / 1000) * 100, 100)}%`}}></div>
             </>
           )}
 
@@ -114,7 +144,7 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
             `}>
               <code className="relative">
                 {displayedContent}
-                {isActive && showCursor && (
+                {isStreaming && showCursor && (
                   <span className="animate-pulse ml-1 text-primary font-bold text-lg">▋</span>
                 )}
               </code>
@@ -147,7 +177,7 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
                     
                     return <div key={index} className="mb-1 break-words">{line}</div>;
                   })}
-                {isActive && showCursor && (
+                {isStreaming && showCursor && (
                   <span className="animate-pulse ml-1 text-primary font-bold text-lg">▋</span>
                 )}
               </div>
@@ -159,16 +189,16 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
               <span className="text-xs">
                 {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
-              {isActive && (
+              {isStreaming && (
                 <Badge variant="outline" className="bg-gradient-glass border-glass-border text-xs animate-pulse">
                   <Zap className="w-3 h-3 mr-1" />
                   <span className="hidden sm:inline">Streaming</span>
                   <span className="sm:hidden">Live</span>
                 </Badge>
               )}
-              {charCount > 0 && isActive && (
+              {displayedContent.length > 0 && (
                 <Badge variant="outline" className="bg-gradient-glass border-glass-border text-xs">
-                  {charCount} chars
+                  {displayedContent.length} chars
                 </Badge>
               )}
             </div>
