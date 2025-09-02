@@ -30,15 +30,33 @@ type ServiceType = 'auto' | 'code' | 'creative' | 'knowledge' | 'general';
 
 const ChatInterface = () => {
   const { theme, toggleTheme } = useTheme();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: "🚀 **Welcome to PandaNexus - The World's Most Revolutionary AI Platform!**\n\nI'm your quantum-powered AI companion, engineered by the genius Shakeel to deliver:\n\n• ⚡ **Lightning Responses** - Sub-millisecond AI interactions\n• 💻 **Code Studio Pro** - World's most advanced development environment\n• 🎨 **AI Art Engine** - Instant image generation and analysis\n• 🌐 **One-Click Deploy** - Deploy to Vercel in seconds\n• 🧠 **Multi-Modal Genius** - Text, code, and image mastery\n• 🔧 **Smart Spell Check** - AI-powered text optimization\n\nReady to build something that will shock the world? Let's create the impossible! 🌟",
-      role: 'assistant',
-      timestamp: new Date(),
-      model: 'PandaNexus Quantum Engine'
+  const [messages, setMessages] = useState<Message[]>(() => {
+    // Load messages from localStorage if available
+    const savedMessages = localStorage.getItem('pandanexus-chat-history');
+    if (savedMessages) {
+      try {
+        const parsed = JSON.parse(savedMessages);
+        return parsed.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }));
+      } catch (e) {
+        console.error('Error loading chat history:', e);
+      }
     }
-  ]);
+    
+    // Default welcome message
+    return [
+      {
+        id: '1',
+        content: "🚀 **Welcome to PandaNexus - The World's Most Revolutionary AI Platform!**\n\nI'm your quantum-powered AI companion, engineered by the genius Shakeel to deliver:\n\n• ⚡ **Lightning Responses** - Sub-millisecond AI interactions\n• 💻 **Code Studio Pro** - World's most advanced development environment\n• 🎨 **AI Art Engine** - Instant image generation and analysis\n• 🌐 **One-Click Deploy** - Deploy to Vercel in seconds\n• 🧠 **Multi-Modal Genius** - Text, code, and image mastery\n• 🔧 **Smart Spell Check** - AI-powered text optimization\n\nReady to build something that will shock the world? Let's create the impossible! 🌟",
+        role: 'assistant',
+        timestamp: new Date(),
+        model: 'PandaNexus Quantum Engine'
+      }
+    ];
+  });
+  
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedService, setSelectedService] = useState<ServiceType>('auto');
@@ -50,6 +68,11 @@ const ChatInterface = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('pandanexus-chat-history', JSON.stringify(messages));
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -175,6 +198,7 @@ const ChatInterface = () => {
       timestamp: new Date()
     };
 
+    // Add user message to chat history
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
@@ -191,10 +215,13 @@ const ChatInterface = () => {
       isStreaming: true
     };
     
+    // Add streaming message to chat history
     setMessages(prev => [...prev, streamingMessage]);
 
     try {
-      const conversationHistory = [...messages, userMessage].map(m => ({
+      // Use only the last few messages to avoid context overload
+      const recentMessages = messages.slice(-10); // Last 5 exchanges
+      const conversationHistory = [...recentMessages, userMessage].map(m => ({
         role: m.role,
         content: m.content,
         image: m.image
@@ -202,7 +229,7 @@ const ChatInterface = () => {
 
       console.log('🚀 Starting quantum-speed streaming...');
       let streamedContent = '';
-      let responseModel = 'PandaNexus AI';
+      let responseModel = 'Llama 3.1 8B';
 
       // Define the onChunk callback function
       const onChunkCallback = (chunk: AIStreamChunk) => {
@@ -270,6 +297,7 @@ const ChatInterface = () => {
     } catch (error) {
       console.error("Chat error:", error);
       
+      // Remove the streaming message on error
       setMessages(prev => prev.filter(msg => msg.id !== streamingId));
       setIsLoading(false);
       setStreamingMessageId(null);
@@ -303,13 +331,16 @@ const ChatInterface = () => {
   };
 
   const clearChat = () => {
-    setMessages([{
-      id: '1',
-      content: "🚀 **Chat cleared! Ready for your next world-changing project!**\n\nWhat incredible creation shall we build together?",
-      role: 'assistant',
-      timestamp: new Date(),
-      model: 'PandaNexus Fresh Start'
-    }]);
+    // Keep only the welcome message
+    setMessages([
+      {
+        id: '1',
+        content: "🚀 **Chat cleared! Ready for your next world-changing project!**\n\nWhat incredible creation shall we build together?",
+        role: 'assistant',
+        timestamp: new Date(),
+        model: 'PandaNexus Fresh Start'
+      }
+    ]);
     toast.success("🧹 Chat cleared!", {
       description: "Ready for your next amazing project",
       duration: 2000,
