@@ -280,72 +280,64 @@ export class AIService {
       });
 
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status} - ${await response.text()}`);
+        const errorText = await response.text();
+        throw new Error(`API request failed: ${response.status} - ${errorText}`);
       }
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No reader available');
 
       const decoder = new TextDecoder();
-      let fullResponse = '';
-      let modelName = 'phi3';
+      let buffer = '';
+      let modelName = 'tinyllama';
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
+        buffer += chunk;
+        
+        // Process complete lines from the buffer
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+        
         for (const line of lines) {
+          if (line.trim() === '') continue;
+          
+          // Handle Server-Sent Events format: "data: {...}"
           if (line.startsWith('data: ')) {
             try {
-              const data = JSON.parse(line.slice(6));
+              const data = JSON.parse(line.slice(6)); // Remove "data: " prefix
               
               if (data.error) {
                 throw new Error(data.error);
               }
 
               if (data.response) {
-                fullResponse += data.response;
-                
-                // Check if onChunk is still a function before calling it
-                if (typeof onChunk === 'function') {
-                  onChunk({
-                    chunk: data.response,
-                    isFinal: false,
-                    model: data.model
-                  });
-                } else {
-                  console.warn('onChunk callback was removed during streaming');
-                  reader.cancel();
-                  return;
-                }
-              }
-
-              if (data.model) {
-                modelName = data.model;
-              }
-
-              if (data.done && fullResponse) {
-                // Cache the successful response
-                quantumCache.set(cacheKey, {
-                  content: fullResponse,
-                  model: modelName
+                // Send each chunk to the callback
+                onChunk({
+                  chunk: data.response,
+                  isFinal: false,
+                  model: data.model || modelName
                 });
                 
-                // Check if onChunk is still a function before calling it
-                if (typeof onChunk === 'function') {
-                  onChunk({
-                    chunk: '',
-                    isFinal: true,
-                    model: modelName
-                  });
+                if (data.model) {
+                  modelName = data.model;
                 }
+              }
+
+              if (data.done) {
+                // Final chunk
+                onChunk({
+                  chunk: '',
+                  isFinal: true,
+                  model: modelName
+                });
                 return;
               }
             } catch (e) {
-              console.error('Error parsing stream data:', e);
+              console.error('Error parsing stream data:', e, line);
             }
           }
         }
