@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import PandaLogo from "./PandaLogo";
 import { Badge } from "@/components/ui/badge";
 import { Zap, Brain, Cpu, Sparkles } from "lucide-react";
@@ -12,52 +12,20 @@ interface StreamingMessageProps {
     model?: string;
     image?: string;
     imageUrl?: string;
+    isStreaming?: boolean;
   };
   isActive?: boolean;
-  onChunk?: (chunk: string) => void;
-  streamingSpeed?: number;
 }
 
 const StreamingMessage = ({ 
   message, 
-  isActive = true, 
-  onChunk,
-  streamingSpeed = 30 
+  isActive = true
 }: StreamingMessageProps) => {
   const [showCursor, setShowCursor] = useState(true);
-  const [displayedContent, setDisplayedContent] = useState("");
-  const [isStreaming, setIsStreaming] = useState(isActive);
   
-  // Handle streaming effect
+  // Cursor blinking effect - only for active assistant messages
   useEffect(() => {
-    if (!isActive || message.role === 'user') {
-      setDisplayedContent(message.content);
-      setIsStreaming(false);
-      return;
-    }
-
-    setIsStreaming(true);
-    setDisplayedContent("");
-    let index = 0;
-    
-    const interval = setInterval(() => {
-      if (index < message.content.length) {
-        const nextChunk = message.content.substring(0, index + 1);
-        setDisplayedContent(nextChunk);
-        onChunk?.(message.content[index]);
-        index++;
-      } else {
-        clearInterval(interval);
-        setIsStreaming(false);
-      }
-    }, streamingSpeed);
-
-    return () => clearInterval(interval);
-  }, [message.content, isActive, message.role, onChunk, streamingSpeed]);
-
-  // Cursor blinking effect
-  useEffect(() => {
-    if (!isStreaming) {
+    if (!isActive || message.role !== 'assistant') {
       setShowCursor(false);
       return;
     }
@@ -67,10 +35,11 @@ const StreamingMessage = ({
     }, 400);
 
     return () => clearInterval(interval);
-  }, [isStreaming]);
+  }, [isActive, message.role]);
 
-  const isCodeBlock = displayedContent.includes('```');
+  const isCodeBlock = message.content.includes('```');
   const isUser = message.role === 'user';
+  const isStreaming = isActive && message.role === 'assistant' && message.isStreaming;
 
   return (
     <div className={`flex gap-2 md:gap-3 p-2 md:p-4 animate-fade-in ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -102,7 +71,7 @@ const StreamingMessage = ({
           {isStreaming && (
             <>
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-primary animate-pulse"></div>
-              <div className="absolute top-0 left-0 h-0.5 bg-white/50 animate-shimmer" style={{width: `${Math.min((displayedContent.length / 1000) * 100, 100)}%`}}></div>
+              <div className="absolute top-0 left-0 h-0.5 bg-white/50 animate-shimmer" style={{width: `${Math.min((message.content.length / 1000) * 100, 100)}%`}}></div>
             </>
           )}
 
@@ -143,7 +112,7 @@ const StreamingMessage = ({
               ${isUser ? 'bg-black/20 border-white/20' : 'bg-muted/10 border-border'}
             `}>
               <code className="relative">
-                {displayedContent}
+                {message.content}
                 {isStreaming && showCursor && (
                   <span className="animate-pulse ml-1 text-primary font-bold text-lg">▋</span>
                 )}
@@ -152,7 +121,7 @@ const StreamingMessage = ({
           ) : (
             <div className="prose prose-invert max-w-none">
               <div className="whitespace-pre-wrap leading-relaxed text-sm md:text-base">
-                {displayedContent
+                {message.content
                   .split('\n').map((line, index) => {
                     if (!line.trim()) return <br key={index} />;
                     
@@ -196,9 +165,9 @@ const StreamingMessage = ({
                   <span className="sm:hidden">Live</span>
                 </Badge>
               )}
-              {displayedContent.length > 0 && (
+              {message.content.length > 0 && (
                 <Badge variant="outline" className="bg-gradient-glass border-glass-border text-xs">
-                  {displayedContent.length} chars
+                  {message.content.length} chars
                 </Badge>
               )}
             </div>
