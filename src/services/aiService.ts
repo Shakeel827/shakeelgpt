@@ -103,38 +103,10 @@ const instantResponses: {pattern: RegExp, response: string}[] = [
 export class AIService {
   private baseUrl = "http://localhost:3001";
   private abortController: AbortController | null = null;
-  private connectionTested = false;
 
   constructor() {
     console.log('✅ Using local AI API server');
-    this.preWarmConnection();
-  }
-
-  // Pre-warm API connection
-  private async preWarmConnection(): Promise<void> {
-    if (this.connectionTested) return;
-    
-    try {
-      const controller = new AbortController();
-      setTimeout(() => controller.abort(), 2000);
-      
-      await fetch(`${this.baseUrl}/api/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: 'test' }],
-          serviceType: 'auto'
-        }),
-        signal: controller.signal
-      });
-      
-      this.connectionTested = true;
-      console.log('✅ Local API connection pre-warmed');
-    } catch (error) {
-      console.log('⚠️ Local API pre-warm failed (may not be running yet)', error);
-    }
+    // Removed pre-warm as it was causing issues
   }
 
   // Create a fast hash for cache key
@@ -172,10 +144,9 @@ export class AIService {
     }
   }
 
-  // NEW: Streaming method for real-time responses
+  // NEW: Optimized streaming method for real-time responses
   async sendMessageStream(
     messages: AIMessage[], 
-    serviceType: string = 'auto',
     onChunk: (chunk: AIStreamChunk) => void
   ): Promise<void> {
     
@@ -187,7 +158,7 @@ export class AIService {
       // Simulate streaming for instant responses
       const words = instantResponse.split(' ');
       for (let i = 0; i < words.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 30));
         onChunk({
           chunk: words[i] + (i < words.length - 1 ? ' ' : ''),
           isFinal: i === words.length - 1
@@ -221,8 +192,7 @@ export class AIService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages,
-          serviceType
+          messages
         }),
         signal: this.abortController.signal
       });
@@ -262,6 +232,12 @@ export class AIService {
               }
 
               if (data.done) {
+                // Cache the successful response
+                responseCache.set(this.getCacheKey(messages, 'auto'), {
+                  content: fullResponse,
+                  model: data.model || 'phi3'
+                });
+                
                 onChunk({
                   chunk: '',
                   isFinal: true
@@ -295,7 +271,7 @@ export class AIService {
   }
 
   // Original method for non-streaming (kept for compatibility)
-  async sendMessage(messages: AIMessage[], serviceType: string = 'auto'): Promise<AIResponse> {
+  async sendMessage(messages: AIMessage[]): Promise<AIResponse> {
     // Check for instant responses first
     const lastMessage = messages[messages.length - 1];
     const instantResponse = this.checkInstantResponse(lastMessage.content);
@@ -308,7 +284,7 @@ export class AIService {
     }
 
     // Check cache
-    const cacheKey = this.getCacheKey(messages, serviceType);
+    const cacheKey = this.getCacheKey(messages, 'auto');
     const cachedResponse = responseCache.get(cacheKey);
     if (cachedResponse) {
       console.log('⚡ Using cached response');
@@ -337,7 +313,7 @@ export class AIService {
         if (this.abortController) {
           this.abortController.abort();
         }
-      }, 60000); // 60 second timeout
+      }, 30000); // 30 second timeout
 
       const startTime = Date.now();
       
@@ -347,8 +323,7 @@ export class AIService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages,
-          serviceType
+          messages
         }),
         signal: this.abortController.signal
       });
