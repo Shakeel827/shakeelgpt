@@ -1,148 +1,213 @@
-import { useState, useEffect } from "react";
-import PandaLogo from "./PandaLogo";
+import { useState, useRef, useEffect } from "react";
+import { toast } from "@/components/ui/use-toast";
+import { Message, AIStreamChunk } from "@/types/chat";
+import { AIService } from "@/services/aiService";
 
-interface ChatMessageProps {
-  message: {
-    id: string;
-    content: string;
-    role: 'user' | 'assistant';
-    timestamp: Date;
-    model?: string;
-    image?: string;
-    imageUrl?: string;
-  };
-  isTyping?: boolean;
-}
+const ChatInterface = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [selectedService, setSelectedService] = useState("pandanexus");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const aiService = useRef(new AIService()).current;
 
-const ChatMessage = ({ message, isTyping = false }: ChatMessageProps) => {
-  const [displayedContent, setDisplayedContent] = useState("");
-  const [showCursor, setShowCursor] = useState(true);
-  
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
-    if (message.role === 'assistant' && !isTyping) {
-      setDisplayedContent("");
-      let index = 0;
-      const text = message.content;
-      
-      const typeWriter = () => {
-        if (index < text.length) {
-          setDisplayedContent(text.slice(0, index + 1));
-          index++;
-          setTimeout(typeWriter, 15); // Slightly slower for better readability
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSendMessage = async (content: string, image?: string) => {
+    if (!content.trim() && !image) return;
+    
+    setIsLoading(true);
+    
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content,
+      role: 'user',
+      timestamp: new Date(),
+      image
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setInput("");
+    
+    const streamingId = (Date.now() + 1).toString();
+    setStreamingMessageId(streamingId);
+    
+    const streamingMessage: Message = {
+      id: streamingId,
+      content: '',
+      role: 'assistant',
+      timestamp: new Date(),
+      isStreaming: true
+    };
+    
+    setMessages(prev => [...prev, streamingMessage]);
+
+    try {
+      const conversationHistory = [...messages, userMessage].map(m => ({
+        role: m.role,
+        content: m.content,
+        image: m.image
+      }));
+
+      console.log('🚀 Starting quantum-speed streaming...');
+      let streamedContent = '';
+      let responseModel = 'PandaNexus AI';
+      let hasImageUrl = false;
+
+      // Define the onChunk callback properly
+      const onChunk = (chunk: AIStreamChunk) => {
+        if (chunk.error) {
+          console.error("Stream error:", chunk.error);
+          setMessages(prev => prev.map(msg => 
+            msg.id === streamingId 
+              ? { ...msg, content: chunk.chunk || 'An error occurred', isStreaming: false }
+              : msg
+          ));
+          setIsLoading(false);
+          setStreamingMessageId(null);
+          return;
+        }
+
+        if (chunk.model) {
+          responseModel = chunk.model;
+        }
+        
+        if (!chunk.isFinal) {
+          streamedContent += chunk.chunk;
+          setMessages(prev => prev.map(msg => 
+            msg.id === streamingId 
+              ? { ...msg, content: streamedContent }
+              : msg
+          ));
         } else {
-          setShowCursor(false);
+          // Check if this was an image generation
+          const isImageGen = /generate.*image|create.*image|make.*image|draw|picture|photo|art|visual/i.test(userMessage.content);
+          let imageUrl = '';
+          
+          if (isImageGen) {
+            const prompt = userMessage.content.replace(/generate|create|make|draw/gi, '').trim();
+            imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Date.now()}&enhance=true&model=flux`;
+            hasImageUrl = true;
+          }
+          
+          // Finalize the message
+          setMessages(prev => prev.map(msg => 
+            msg.id === streamingId 
+              ? { 
+                  ...msg, 
+                  content: streamedContent, 
+                  isStreaming: false, 
+                  model: responseModel,
+                  imageUrl: hasImageUrl ? imageUrl : undefined
+                }
+              : msg
+          ));
+          setIsLoading(false);
+          setStreamingMessageId(null);
+          
+          toast.success("🎉 Response completed!", {
+            description: `Powered by ${responseModel} - Lightning fast!`,
+            duration: 2000,
+          });
         }
       };
+
+      // Call the streaming service with the properly defined callback
+      await aiService.sendMessageStream(
+        conversationHistory, 
+        selectedService,
+        onChunk
+      );
       
-      setTimeout(typeWriter, 100);
-    } else {
-      setDisplayedContent(message.content);
-      setShowCursor(false);
+    } catch (error) {
+      console.error("Chat error:", error);
+      
+      setMessages(prev => prev.filter(msg => msg.id !== streamingId));
+      setIsLoading(false);
+      setStreamingMessageId(null);
+      
+      toast.error("Failed to send message", {
+        description: "Please try again or check your connection.",
+        duration: 3000,
+      });
     }
-  }, [message.content, message.role, isTyping]);
+  };
 
-  const isCodeBlock = message.content.includes('```');
-  const isUser = message.role === 'user';
-
+  // Render UI for the chat interface
   return (
-    <div className={`flex gap-3 p-3 md:p-4 animate-fade-in ${isUser ? 'justify-end' : 'justify-start'}`}>
-      {!isUser && (
-        <div className="flex-shrink-0">
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow">
-            <PandaLogo className="w-4 h-4 md:w-6 md:h-6" animate={isTyping} />
-          </div>
-        </div>
-      )}
-      
-      <div className={`max-w-[85%] md:max-w-[75%] ${isUser ? 'order-first' : ''}`}>
-        <div className={`
-          backdrop-blur-xl border border-glass-border shadow-glass
-          ${isUser 
-            ? 'bg-gradient-primary text-primary-foreground ml-auto rounded-l-2xl rounded-tr-2xl' 
-            : 'bg-gradient-glass text-foreground rounded-r-2xl rounded-tl-2xl'
-          }
-          p-3 md:p-4 transition-all duration-300 hover:shadow-glow
-        `}>
-          {/* User uploaded image */}
-          {message.image && (
-            <div className="mb-3 group">
-              <img 
-                src={message.image} 
-                alt="User uploaded" 
-                className="max-w-full max-h-64 rounded-lg transition-transform duration-300 hover:scale-105 cursor-pointer object-cover" 
-              />
-            </div>
-          )}
-
-          {/* AI generated image */}
-          {message.imageUrl && (
-            <div className="mb-3 group">
-              <img 
-                src={message.imageUrl} 
-                alt="AI generated" 
-                className="max-w-full max-h-64 rounded-lg transition-transform duration-300 hover:scale-105 cursor-pointer object-cover" 
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            </div>
-          )}
-          
-          {isCodeBlock ? (
-            <pre className={`
-              font-mono text-xs sm:text-sm overflow-x-auto p-3 rounded-lg border max-h-80
-              ${isUser ? 'bg-black/20 border-white/20' : 'bg-muted border-border'}
-            `}>
-              <code>{displayedContent}</code>
-            </pre>
-          ) : (
-            <div className="prose prose-invert max-w-none">
-              <div className="whitespace-pre-wrap leading-relaxed text-sm md:text-base">
-                {displayedContent
-                  .split('\n').map((line, index) => {
-                    if (!line.trim()) return <br key={index} />;
-                    
-                    // Handle bullet points
-                    if (line.trim().startsWith('•') || line.trim().startsWith('-')) {
-                      return (
-                        <div key={index} className="flex items-start gap-2 ml-2 mb-1">
-                          <span className="text-primary mt-1 text-xs">•</span>
-                          <span className="flex-1 break-words">{line.replace(/^[•\-]\s*/, '')}</span>
-                        </div>
-                      );
-                    }
-                    
-                    return <div key={index} className="mb-1 break-words">{line}</div>;
-                  })}
-                {message.role === 'assistant' && showCursor && (
-                  <span className="animate-pulse ml-1 text-primary">▋</span>
-                )}
+    <div className="flex flex-col h-full max-w-4xl mx-auto">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg p-3 ${
+                message.role === 'user'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 text-gray-800'
+              }`}
+            >
+              {message.image && (
+                <img
+                  src={message.image}
+                  alt="Uploaded"
+                  className="rounded mb-2 max-w-full h-auto"
+                />
+              )}
+              {message.imageUrl && (
+                <img
+                  src={message.imageUrl}
+                  alt="Generated"
+                  className="rounded mb-2 max-w-full h-auto"
+                />
+              )}
+              <p className="whitespace-pre-wrap">{message.content}</p>
+              {message.isStreaming && (
+                <span className="inline-block w-2 h-4 bg-current ml-1 animate-pulse"></span>
+              )}
+              <div className="text-xs mt-1 opacity-70">
+                {message.timestamp.toLocaleTimeString()} 
+                {message.model && ` · ${message.model}`}
               </div>
             </div>
-          )}
-          
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-glass-border opacity-70">
-            <span className="text-xs">
-              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
-            {message.model && (
-              <span className="text-xs text-muted-foreground truncate ml-2">
-                {message.model}
-              </span>
-            )}
           </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="p-4 border-t">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your message..."
+            className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage(input);
+              }
+            }}
+            disabled={isLoading}
+          />
+          <button
+            onClick={() => handleSendMessage(input)}
+            disabled={isLoading || !input.trim()}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+          >
+            {isLoading ? 'Sending...' : 'Send'}
+          </button>
         </div>
       </div>
-      
-      {isUser && (
-        <div className="flex-shrink-0">
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-secondary flex items-center justify-center border border-border">
-            <span className="text-sm font-medium">👤</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
-export default ChatMessage;
+export default ChatInterface;
