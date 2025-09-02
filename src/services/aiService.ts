@@ -186,7 +186,7 @@ export class AIService {
     // Check if onChunk is a valid function
     if (typeof onChunk !== 'function') {
       console.error('❌ onChunk callback is not a function');
-      return;
+      throw new Error('onChunk callback must be a function');
     }
     
     // Check for instant responses first
@@ -199,11 +199,18 @@ export class AIService {
       const words = instantResponse.split(' ');
       for (let i = 0; i < words.length; i++) {
         await new Promise(resolve => setTimeout(resolve, 20)); // Faster typing effect
-        onChunk({
-          chunk: words[i] + (i < words.length - 1 ? ' ' : ''),
-          isFinal: i === words.length - 1,
-          model: 'PandaNexus-Instant'
-        });
+        
+        // Check if onChunk is still a function before calling it
+        if (typeof onChunk === 'function') {
+          onChunk({
+            chunk: words[i] + (i < words.length - 1 ? ' ' : ''),
+            isFinal: i === words.length - 1,
+            model: 'PandaNexus-Instant'
+          });
+        } else {
+          console.warn('onChunk callback was removed during streaming');
+          return;
+        }
       }
       return;
     }
@@ -218,16 +225,24 @@ export class AIService {
       const words = cachedResponse.content.split(' ');
       for (let i = 0; i < words.length; i++) {
         await new Promise(resolve => setTimeout(resolve, 15));
-        onChunk({
-          chunk: words[i] + (i < words.length - 1 ? ' ' : ''),
-          isFinal: i === words.length - 1,
-          model: cachedResponse.model || 'phi3'
-        });
+        
+        // Check if onChunk is still a function before calling it
+        if (typeof onChunk === 'function') {
+          onChunk({
+            chunk: words[i] + (i < words.length - 1 ? ' ' : ''),
+            isFinal: i === words.length - 1,
+            model: cachedResponse.model || 'phi3'
+          });
+        } else {
+          console.warn('onChunk callback was removed during streaming');
+          return;
+        }
       }
       return;
     }
 
     try {
+      const lastMessage = messages[messages.length - 1];
       const hasImage = !!lastMessage.image;
       const isImageGeneration = /generate.*image|create.*image|make.*image|draw|picture|photo/i.test(lastMessage.content);
 
@@ -237,11 +252,16 @@ export class AIService {
         const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${Date.now()}`;
         const response = `I've generated an image for: "${prompt}". Here's your custom AI-generated image!`;
         
-        onChunk({
-          chunk: response,
-          isFinal: true,
-          model: 'Pollinations-AI'
-        });
+        // Check if onChunk is still a function before calling it
+        if (typeof onChunk === 'function') {
+          onChunk({
+            chunk: response,
+            isFinal: true,
+            model: 'Pollinations-AI'
+          });
+        } else {
+          console.warn('onChunk callback was removed during image generation');
+        }
         return;
       }
 
@@ -288,11 +308,19 @@ export class AIService {
 
               if (data.response) {
                 fullResponse += data.response;
-                onChunk({
-                  chunk: data.response,
-                  isFinal: false,
-                  model: data.model
-                });
+                
+                // Check if onChunk is still a function before calling it
+                if (typeof onChunk === 'function') {
+                  onChunk({
+                    chunk: data.response,
+                    isFinal: false,
+                    model: data.model
+                  });
+                } else {
+                  console.warn('onChunk callback was removed during streaming');
+                  reader.cancel();
+                  return;
+                }
               }
 
               if (data.model) {
@@ -306,11 +334,14 @@ export class AIService {
                   model: modelName
                 });
                 
-                onChunk({
-                  chunk: '',
-                  isFinal: true,
-                  model: modelName
-                });
+                // Check if onChunk is still a function before calling it
+                if (typeof onChunk === 'function') {
+                  onChunk({
+                    chunk: '',
+                    isFinal: true,
+                    model: modelName
+                  });
+                }
                 return;
               }
             } catch (e) {
@@ -321,20 +352,27 @@ export class AIService {
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        onChunk({
-          chunk: '',
-          isFinal: true,
-          error: "Request cancelled by user"
-        });
+        // Check if onChunk is still a function before calling it
+        if (typeof onChunk === 'function') {
+          onChunk({
+            chunk: '',
+            isFinal: true,
+            error: "Request cancelled by user"
+          });
+        }
         return;
       }
       
       console.error("❌ AIService Error:", error);
-      onChunk({
-        chunk: `Error: ${error.message}`,
-        isFinal: true,
-        error: error.message
-      });
+      
+      // Check if onChunk is still a function before calling it
+      if (typeof onChunk === 'function') {
+        onChunk({
+          chunk: `Error: ${error.message}`,
+          isFinal: true,
+          error: error.message
+        });
+      }
     } finally {
       this.abortController = null;
     }
@@ -364,6 +402,7 @@ export class AIService {
     }
 
     try {
+      const lastMessage = messages[messages.length - 1];
       const hasImage = !!lastMessage.image;
       const isImageGeneration = /generate.*image|create.*image|make.*image|draw|picture|photo/i.test(lastMessage.content);
 
