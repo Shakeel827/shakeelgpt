@@ -95,57 +95,40 @@ const instantResponses: {pattern: RegExp, response: string}[] = [
 ];
 
 export class AIService {
-  private apiKey: string;
-  private baseUrl = "https://openrouter.ai/api/v1";
+  private baseUrl = "http://localhost:3001"; // Your local API server
   private abortController: AbortController | null = null;
   private connectionTested = false;
 
   constructor() {
-    this.apiKey = import.meta.env.VITE_API_KEY || '';
-    
-    if (!this.apiKey && typeof window !== 'undefined') {
-      this.apiKey = (window as any)._env_?.VITE_API_KEY || '';
-    }
-    
-    if (!this.apiKey) {
-      console.error('❌ OpenRouter API key not found');
-    } else {
-      console.log('✅ OpenRouter API key loaded');
-      // Pre-warm connection in background
-      this.preWarmConnection();
-    }
+    console.log('✅ Using local AI API server');
+    // Pre-warm connection in background
+    this.preWarmConnection();
   }
-
-  private models = {
-    auto: "deepseek/deepseek-chat-v3.1:free",
-    code: "deepseek/deepseek-chat-v3.1:free",
-    creative: "deepseek/deepseek-chat-v3.1:free",
-    knowledge: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
-    general: "mistralai/mistral-nemo:free",
-    image: "google/gemini-2.5-flash-image-preview:free"
-  };
 
   // Pre-warm API connection
   private async preWarmConnection(): Promise<void> {
     if (this.connectionTested) return;
     
     try {
-      // Create a minimal pre-warm request
       const controller = new AbortController();
       setTimeout(() => controller.abort(), 2000);
       
-      await fetch(`${this.baseUrl}/models`, {
-        method: 'GET',
+      await fetch(`${this.baseUrl}/api/chat`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'test' }],
+          serviceType: 'auto'
+        }),
         signal: controller.signal
       });
       
       this.connectionTested = true;
-      console.log('✅ API connection pre-warmed');
+      console.log('✅ Local API connection pre-warmed');
     } catch (error) {
-      console.log('⚠️ Pre-warm failed (non-critical)', error);
+      console.log('⚠️ Local API pre-warm failed (may not be running yet)', error);
     }
   }
 
@@ -163,11 +146,6 @@ export class AIService {
   private getCacheKey(messages: AIMessage[], serviceType: string): string {
     const keyData = `${serviceType}:${JSON.stringify(messages)}`;
     return this.fastHash(keyData);
-  }
-
-  private getModel(serviceType: string, hasImage: boolean): string {
-    if (hasImage) return this.models.image;
-    return this.models[serviceType as keyof typeof this.models] || this.models.auto;
   }
 
   // Check for instant responses
@@ -211,13 +189,8 @@ export class AIService {
     }
 
     try {
-      if (!this.apiKey) {
-        throw new Error('API key not configured');
-      }
-
       const hasImage = !!lastMessage.image;
       const isImageGeneration = /generate.*image|create.*image|make.*image|draw|picture|photo/i.test(lastMessage.content);
-      const selectedModel = this.getModel(serviceType, hasImage);
 
       // Fast image generation
       if (isImageGeneration && !hasImage) {
@@ -232,55 +205,32 @@ export class AIService {
         return response;
       }
 
-      // Prepare API messages with optimized history
-      const apiMessages = [
-        { 
-          role: 'system', 
-          content: "You are PandaNexus, an advanced AI assistant. Provide helpful and concise responses." 
-        },
-        // Include only relevant message history
-        ...messages.slice(-3).map(msg => ({
-          role: msg.role,
-          content: msg.image ? [
-            { type: "text", text: msg.content },
-            { type: "image_url", image_url: { url: msg.image } }
-          ] : msg.content
-        }))
-      ];
-
       // Set up abort controller with reasonable timeout
       this.abortController = new AbortController();
       const timeoutId = setTimeout(() => {
         if (this.abortController) {
           this.abortController.abort();
         }
-      }, 25000); // 25 second timeout
+      }, 30000); // 30 second timeout
 
       const startTime = Date.now();
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      
+      // Call your LOCAL API server
+      const response = await fetch(`${this.baseUrl}/api/chat`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://pandanexus.dev',
-          'X-Title': 'PandaNexus AI Platform'
         },
         body: JSON.stringify({
-          model: selectedModel,
-          messages: apiMessages,
-          temperature: serviceType === 'creative' ? 0.7 : serviceType === 'code' ? 0.3 : 0.5,
-          max_tokens: 1200,
-          top_p: 0.8,
-          frequency_penalty: 0.1,
-          presence_penalty: 0.1,
-          stream: false
+          messages,
+          serviceType
         }),
         signal: this.abortController.signal
       });
 
       clearTimeout(timeoutId);
       const responseTime = Date.now() - startTime;
-      console.log(`✅ API response in ${responseTime}ms`);
+      console.log(`✅ Local API response in ${responseTime}ms`);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -290,8 +240,8 @@ export class AIService {
       const data = await response.json();
       
       const aiResponse = {
-        content: data.choices?.[0]?.message?.content || lastMessage.content,
-        model: data.model || selectedModel,
+        content: data.content || 'No response generated.',
+        model: data.model || 'phi3',
         imageUrl: lastMessage.image
       };
 
