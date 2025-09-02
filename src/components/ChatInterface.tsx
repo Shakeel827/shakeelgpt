@@ -205,65 +205,68 @@ const ChatInterface = () => {
       let responseModel = 'PandaNexus AI';
       let hasImageUrl = false;
 
-      await aiService.sendMessageStream(
-        conversationHistory, 
-        selectedService,
-        (chunk: AIStreamChunk) => {
-          if (chunk.error) {
-            console.error("Stream error:", chunk.error);
-            setMessages(prev => prev.map(msg => 
-              msg.id === streamingId 
-                ? { ...msg, content: chunk.chunk || 'An error occurred', isStreaming: false }
-                : msg
-            ));
-            setIsLoading(false);
-            setStreamingMessageId(null);
-            return;
-          }
+      // Define the onChunk callback function
+      const onChunkCallback = (chunk: AIStreamChunk) => {
+        if (chunk.error) {
+          console.error("Stream error:", chunk.error);
+          setMessages(prev => prev.map(msg => 
+            msg.id === streamingId 
+              ? { ...msg, content: chunk.chunk || 'An error occurred', isStreaming: false }
+              : msg
+          ));
+          setIsLoading(false);
+          setStreamingMessageId(null);
+          return;
+        }
 
-          if (chunk.model) {
-            responseModel = chunk.model;
+        if (chunk.model) {
+          responseModel = chunk.model;
+        }
+        
+        if (!chunk.isFinal) {
+          streamedContent += chunk.chunk;
+          setMessages(prev => prev.map(msg => 
+            msg.id === streamingId 
+              ? { ...msg, content: streamedContent }
+              : msg
+          ));
+        } else {
+          // Check if this was an image generation
+          const isImageGen = /generate.*image|create.*image|make.*image|draw|picture|photo|art|visual/i.test(userMessage.content);
+          let imageUrl = '';
+          
+          if (isImageGen) {
+            const prompt = userMessage.content.replace(/generate|create|make|draw/gi, '').trim();
+            imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Date.now()}&enhance=true&model=flux`;
+            hasImageUrl = true;
           }
           
-          if (!chunk.isFinal) {
-            streamedContent += chunk.chunk;
-            setMessages(prev => prev.map(msg => 
-              msg.id === streamingId 
-                ? { ...msg, content: streamedContent }
-                : msg
-            ));
-          } else {
-            // Check if this was an image generation
-            const isImageGen = /generate.*image|create.*image|make.*image|draw|picture|photo|art|visual/i.test(userMessage.content);
-            let imageUrl = '';
-            
-            if (isImageGen) {
-              const prompt = userMessage.content.replace(/generate|create|make|draw/gi, '').trim();
-              imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Date.now()}&enhance=true&model=flux`;
-              hasImageUrl = true;
-            }
-            
-            // Finalize the message
-            setMessages(prev => prev.map(msg => 
-              msg.id === streamingId 
-                ? { 
-                    ...msg, 
-                    content: streamedContent, 
-                    isStreaming: false, 
-                    model: responseModel,
-                    imageUrl: hasImageUrl ? imageUrl : undefined
-                  }
-                : msg
-            ));
-            setIsLoading(false);
-            setStreamingMessageId(null);
-            
-            toast.success("🎉 Response completed!", {
-              description: `Powered by ${responseModel} - Lightning fast!`,
-              duration: 2000,
-            });
-          }
+          // Finalize the message
+          setMessages(prev => prev.map(msg => 
+            msg.id === streamingId 
+              ? { 
+                  ...msg, 
+                  content: streamedContent, 
+                  isStreaming: false, 
+                  model: responseModel,
+                  imageUrl: hasImageUrl ? imageUrl : undefined
+                }
+              : msg
+          ));
+          setIsLoading(false);
+          setStreamingMessageId(null);
+          
+          toast.success("🎉 Response completed!", {
+            description: `Powered by ${responseModel} - Lightning fast!`,
+            duration: 2000,
+          });
         }
+      };
+
+      // Call the streaming service with the properly defined callback
+      await aiService.sendMessageStream(
+        conversationHistory, 
+        onChunkCallback
       );
       
     } catch (error) {
