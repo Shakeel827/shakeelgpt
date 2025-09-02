@@ -203,7 +203,6 @@ const ChatInterface = () => {
       console.log('🚀 Starting quantum-speed streaming...');
       let streamedContent = '';
       let responseModel = 'PandaNexus AI';
-      let hasImageUrl = false;
 
       // Define the onChunk callback function
       const onChunkCallback = (chunk: AIStreamChunk) => {
@@ -238,7 +237,6 @@ const ChatInterface = () => {
           if (isImageGen) {
             const prompt = userMessage.content.replace(/generate|create|make|draw/gi, '').trim();
             imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Date.now()}&enhance=true&model=flux`;
-            hasImageUrl = true;
           }
           
           // Finalize the message
@@ -249,7 +247,7 @@ const ChatInterface = () => {
                   content: streamedContent, 
                   isStreaming: false, 
                   model: responseModel,
-                  imageUrl: hasImageUrl ? imageUrl : undefined
+                  imageUrl: imageUrl || undefined
                 }
               : msg
           ));
@@ -273,21 +271,11 @@ const ChatInterface = () => {
       console.error("Chat error:", error);
       
       setMessages(prev => prev.filter(msg => msg.id !== streamingId));
-      
-      const errorMessage: Message = {
-        id: (Date.now() + 2).toString(),
-        content: "🔧 **Quantum Systems Optimizing**\n\nI'm temporarily running in offline mode while upgrading my neural networks to serve you better. I can still provide:\n\n• 💻 Code generation and debugging\n• 🏗️ Project planning and architecture\n• 🧠 Programming guidance and solutions\n• 🎨 Creative problem solving\n• 🚀 Deployment assistance\n\nWhat incredible project shall we work on?",
-        role: 'assistant',
-        timestamp: new Date(),
-        model: 'PandaNexus Offline'
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
       setIsLoading(false);
       setStreamingMessageId(null);
       
-      toast.info("🔄 Offline mode active", {
-        description: "Core genius functions still available",
+      toast.error("Failed to send message", {
+        description: "Please try again or check your connection.",
         duration: 3000,
       });
     }
