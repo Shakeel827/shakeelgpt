@@ -183,6 +183,12 @@ export class AIService {
     onChunk: (chunk: AIStreamChunk) => void
   ): Promise<void> {
     
+    // Check if onChunk is a valid function
+    if (typeof onChunk !== 'function') {
+      console.error('❌ onChunk callback is not a function');
+      return;
+    }
+    
     // Check for instant responses first
     const lastMessage = messages[messages.length - 1];
     const instantResponse = this.checkInstantResponse(lastMessage.content);
