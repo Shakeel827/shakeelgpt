@@ -12,6 +12,12 @@ export interface AIResponse {
   error?: string;
 }
 
+export interface AIStreamChunk {
+  chunk: string;
+  isFinal: boolean;
+  error?: string;
+}
+
 // Smart response cache with adaptive TTL
 class SmartResponseCache {
   private cache: Map<string, { response: AIResponse; timestamp: number; ttl: number }>;
@@ -48,7 +54,7 @@ class SmartResponseCache {
     const content = response.content;
     
     // Longer TTL for factual responses, shorter for creative ones
-    if (content.length > 300) ttl = Math.min(ttl, 3 * 60 * 1000); // Shorter for long responses
+    if (content.length > 300) ttl = Math.min(ttl, 3 * 60 * 1000);
     if (content.includes('I think') || content.includes('in my opinion')) ttl = 2 * 60 * 1000;
     
     // Evict least frequently used if needed
@@ -95,13 +101,12 @@ const instantResponses: {pattern: RegExp, response: string}[] = [
 ];
 
 export class AIService {
-  private baseUrl = "http://localhost:3001"; // Your local API server
+  private baseUrl = "http://localhost:3001";
   private abortController: AbortController | null = null;
   private connectionTested = false;
 
   constructor() {
     console.log('✅ Using local AI API server');
-    // Pre-warm connection in background
     this.preWarmConnection();
   }
 
@@ -167,7 +172,129 @@ export class AIService {
     }
   }
 
-  // Optimized message sending with smart caching
+  // NEW: Streaming method for real-time responses
+  async sendMessageStream(
+    messages: AIMessage[], 
+    serviceType: string = 'auto',
+    onChunk: (chunk: AIStreamChunk) => void
+  ): Promise<void> {
+    
+    // Check for instant responses first
+    const lastMessage = messages[messages.length - 1];
+    const instantResponse = this.checkInstantResponse(lastMessage.content);
+    if (instantResponse) {
+      console.log('⚡ Using instant response');
+      // Simulate streaming for instant responses
+      const words = instantResponse.split(' ');
+      for (let i = 0; i < words.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        onChunk({
+          chunk: words[i] + (i < words.length - 1 ? ' ' : ''),
+          isFinal: i === words.length - 1
+        });
+      }
+      return;
+    }
+
+    try {
+      const hasImage = !!lastMessage.image;
+      const isImageGeneration = /generate.*image|create.*image|make.*image|draw|picture|photo/i.test(lastMessage.content);
+
+      // Handle image generation (non-streaming)
+      if (isImageGeneration && !hasImage) {
+        const prompt = lastMessage.content.replace(/generate|create|make|draw/gi, '').trim();
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${Date.now()}`;
+        const response = `I've generated an image for: "${prompt}". Here's your custom AI-generated image!`;
+        
+        onChunk({
+          chunk: response,
+          isFinal: true,
+        });
+        return;
+      }
+
+      this.abortController = new AbortController();
+      
+      const response = await fetch(`${this.baseUrl}/api/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages,
+          serviceType
+        }),
+        signal: this.abortController.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`Stream request failed: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No reader available');
+
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.error) {
+                throw new Error(data.error);
+              }
+
+              if (data.response) {
+                fullResponse += data.response;
+                onChunk({
+                  chunk: data.response,
+                  isFinal: false
+                });
+              }
+
+              if (data.done) {
+                onChunk({
+                  chunk: '',
+                  isFinal: true
+                });
+                return;
+              }
+            } catch (e) {
+              console.error('Error parsing stream data:', e);
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        onChunk({
+          chunk: '',
+          isFinal: true,
+          error: "Request cancelled"
+        });
+        return;
+      }
+      
+      onChunk({
+        chunk: `Error: ${error.message}`,
+        isFinal: true,
+        error: error.message
+      });
+    } finally {
+      this.abortController = null;
+    }
+  }
+
+  // Original method for non-streaming (kept for compatibility)
   async sendMessage(messages: AIMessage[], serviceType: string = 'auto'): Promise<AIResponse> {
     // Check for instant responses first
     const lastMessage = messages[messages.length - 1];
@@ -205,17 +332,15 @@ export class AIService {
         return response;
       }
 
-      // Set up abort controller with reasonable timeout
       this.abortController = new AbortController();
       const timeoutId = setTimeout(() => {
         if (this.abortController) {
           this.abortController.abort();
         }
-      }, 30000); // 30 second timeout
+      }, 60000); // 60 second timeout
 
       const startTime = Date.now();
       
-      // Call your LOCAL API server
       const response = await fetch(`${this.baseUrl}/api/chat`, {
         method: 'POST',
         headers: {
@@ -245,7 +370,6 @@ export class AIService {
         imageUrl: lastMessage.image
       };
 
-      // Cache the successful response
       responseCache.set(cacheKey, aiResponse);
       
       return aiResponse;
@@ -271,7 +395,6 @@ export class AIService {
 
   // Fast local-only spell check
   async spellCheck(text: string): Promise<string> {
-    // Simple correction of common errors
     const quickCorrections: Record<string, string> = {
       'teh': 'the', 
       'recieve': 'receive', 
