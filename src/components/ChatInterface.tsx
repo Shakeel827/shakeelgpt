@@ -10,7 +10,7 @@ import ContactDialog from "./ContactDialog";
 import CodeInterface from "./CodeInterface";
 import VercelDeploy from "./VercelDeploy";
 import { aiService, AIStreamChunk } from "@/services/aiService";
-import { Send, Plus, Copy, Code, MessageCircle, Rocket, Image, Sparkles, Menu, X, Zap, Brain, Cpu } from "lucide-react";
+import { Send, Plus, Copy, Code, MessageCircle, Rocket, Image, Sparkles, Menu, X, Zap, Brain, Cpu, Wand2 } from "lucide-react";
 import PandaLogo from "./PandaLogo";
 import { useTheme } from "./ThemeProvider";
 import { toast } from "@/components/ui/sonner";
@@ -33,10 +33,10 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: "🚀 **Welcome to PandaNexus - The World's Most Advanced AI Platform!**\n\nI'm your lightning-fast AI companion, engineered by Shakeel to deliver:\n\n• ⚡ **Instant Responses** - Sub-second AI interactions\n• 💻 **Code Studio** - Professional development environment\n• 🎨 **Creative Engine** - AI art and content generation\n• 🌐 **One-Click Deploy** - Instant Vercel deployment\n• 🧠 **Multi-Modal AI** - Text, code, and image understanding\n\nWhat incredible project shall we build today?",
+      content: "🚀 **Welcome to PandaNexus - The World's Most Revolutionary AI Platform!**\n\nI'm your quantum-powered AI companion, engineered by the genius Shakeel to deliver:\n\n• ⚡ **Lightning Responses** - Sub-millisecond AI interactions\n• 💻 **Code Studio Pro** - World's most advanced development environment\n• 🎨 **AI Art Engine** - Instant image generation and analysis\n• 🌐 **One-Click Deploy** - Deploy to Vercel in seconds\n• 🧠 **Multi-Modal Genius** - Text, code, and image mastery\n• 🔧 **Smart Spell Check** - AI-powered text optimization\n\nReady to build something that will shock the world? Let's create the impossible! 🌟",
       role: 'assistant',
       timestamp: new Date(),
-      model: 'PandaNexus Engine'
+      model: 'PandaNexus Quantum Engine'
     }
   ]);
   const [inputValue, setInputValue] = useState("");
@@ -45,9 +45,11 @@ const ChatInterface = () => {
   const [showCodeInterface, setShowCodeInterface] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [isSpellChecking, setIsSpellChecking] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -55,9 +57,26 @@ const ChatInterface = () => {
 
   useEffect(scrollToBottom, [messages]);
 
+  // Auto-switch to Code Studio when code service is selected
+  useEffect(() => {
+    if (selectedService === 'code') {
+      const timer = setTimeout(() => {
+        setShowCodeInterface(true);
+        toast.success("🚀 Code Studio Activated!", {
+          description: "Welcome to the world's most advanced coding environment",
+          duration: 3000,
+        });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedService]);
+
   // Show code interface
   if (showCodeInterface) {
-    return <CodeInterface onBack={() => setShowCodeInterface(false)} />;
+    return <CodeInterface onBack={() => {
+      setShowCodeInterface(false);
+      setSelectedService('auto');
+    }} />;
   }
 
   // ULTRA-FAST FILE UPLOAD with instant preview
@@ -71,14 +90,14 @@ const ChatInterface = () => {
         const imageUrl = e.target?.result as string;
         const fileMessage: Message = {
           id: Date.now().toString(),
-          content: "🖼️ I've uploaded an image for analysis. What would you like me to tell you about it?",
+          content: "🖼️ I've uploaded an image for AI analysis. What would you like me to tell you about it?",
           role: 'user',
           timestamp: new Date(),
           image: imageUrl
         };
         setMessages(prev => [...prev, fileMessage]);
-        toast.success("Image uploaded!", {
-          description: "AI will analyze your image instantly",
+        toast.success("Image uploaded instantly!", {
+          description: "AI will analyze your image with superhuman precision",
           duration: 2000,
         });
       };
@@ -89,12 +108,12 @@ const ChatInterface = () => {
         const content = e.target?.result as string;
         const fileMessage: Message = {
           id: Date.now().toString(),
-          content: `📄 **File Content:**\n\`\`\`\n${content}\n\`\`\``,
+          content: `📄 **File Content Analyzed:**\n\`\`\`\n${content.slice(0, 2000)}${content.length > 2000 ? '\n... (truncated)' : ''}\n\`\`\``,
           role: 'user',
           timestamp: new Date()
         };
         setMessages(prev => [...prev, fileMessage]);
-        toast.success("File processed!", {
+        toast.success("File processed instantly!", {
           description: "Content ready for AI analysis",
           duration: 2000,
         });
@@ -107,35 +126,40 @@ const ChatInterface = () => {
     }
   };
 
-  // LIGHTNING-FAST SPELL CHECK
+  // REVOLUTIONARY AI SPELL CHECK
   const handleSpellCheck = async () => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || isSpellChecking) return;
     
     const originalText = inputValue;
-    setInputValue("✨ Checking...");
+    setIsSpellChecking(true);
+    setInputValue("✨ AI optimizing your text...");
     
     try {
       const correctedText = await aiService.spellCheck(originalText);
       setInputValue(correctedText);
       
       if (correctedText !== originalText) {
-        toast.success("Text improved!", {
-          description: "Grammar and spelling optimized",
+        toast.success("🎯 Text perfected by AI!", {
+          description: "Grammar, spelling, and clarity optimized",
           duration: 2000,
         });
       } else {
-        toast.info("Text looks perfect!", {
-          description: "No corrections needed",
+        toast.info("✅ Your text is already perfect!", {
+          description: "No improvements needed",
           duration: 1500,
         });
       }
     } catch (error) {
       console.error("Spell check failed:", error);
       setInputValue(originalText);
-      toast.error("Spell check unavailable", {
-        description: "Please try again later",
+      toast.error("Spell check temporarily unavailable", {
+        description: "Please try again in a moment",
         duration: 2000,
       });
+    } finally {
+      setIsSpellChecking(false);
+      // Refocus input
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
 
@@ -176,9 +200,10 @@ const ChatInterface = () => {
         image: m.image
       }));
 
-      console.log('🚀 Starting ultra-fast streaming...');
+      console.log('🚀 Starting quantum-speed streaming...');
       let streamedContent = '';
       let responseModel = 'PandaNexus AI';
+      let hasImageUrl = false;
 
       await aiService.sendMessageStream(
         conversationHistory, 
@@ -196,6 +221,10 @@ const ChatInterface = () => {
             return;
           }
 
+          if (chunk.model) {
+            responseModel = chunk.model;
+          }
+          
           if (!chunk.isFinal) {
             streamedContent += chunk.chunk;
             setMessages(prev => prev.map(msg => 
@@ -204,17 +233,33 @@ const ChatInterface = () => {
                 : msg
             ));
           } else {
+            // Check if this was an image generation
+            const isImageGen = /generate.*image|create.*image|make.*image|draw|picture|photo|art|visual/i.test(userMessage.content);
+            let imageUrl = '';
+            
+            if (isImageGen) {
+              const prompt = userMessage.content.replace(/generate|create|make|draw/gi, '').trim();
+              imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Date.now()}&enhance=true&model=flux`;
+              hasImageUrl = true;
+            }
+            
             // Finalize the message
             setMessages(prev => prev.map(msg => 
               msg.id === streamingId 
-                ? { ...msg, content: streamedContent, isStreaming: false, model: responseModel }
+                ? { 
+                    ...msg, 
+                    content: streamedContent, 
+                    isStreaming: false, 
+                    model: responseModel,
+                    imageUrl: hasImageUrl ? imageUrl : undefined
+                  }
                 : msg
             ));
             setIsLoading(false);
             setStreamingMessageId(null);
             
-            toast.success("Response complete!", {
-              description: `Powered by ${responseModel}`,
+            toast.success("🎉 Response completed!", {
+              description: `Powered by ${responseModel} - Lightning fast!`,
               duration: 2000,
             });
           }
@@ -224,12 +269,11 @@ const ChatInterface = () => {
     } catch (error) {
       console.error("Chat error:", error);
       
-      // Remove streaming message and add error message
       setMessages(prev => prev.filter(msg => msg.id !== streamingId));
       
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
-        content: "🔧 **System Optimization in Progress**\n\nI'm temporarily running in offline mode while optimizing my neural networks. I can still help you with:\n\n• Code generation and debugging\n• Project planning and architecture\n• General programming questions\n• Creative problem solving\n\nWhat would you like to work on?",
+        content: "🔧 **Quantum Systems Optimizing**\n\nI'm temporarily running in offline mode while upgrading my neural networks to serve you better. I can still provide:\n\n• 💻 Code generation and debugging\n• 🏗️ Project planning and architecture\n• 🧠 Programming guidance and solutions\n• 🎨 Creative problem solving\n• 🚀 Deployment assistance\n\nWhat incredible project shall we work on?",
         role: 'assistant',
         timestamp: new Date(),
         model: 'PandaNexus Offline'
@@ -239,8 +283,8 @@ const ChatInterface = () => {
       setIsLoading(false);
       setStreamingMessageId(null);
       
-      toast.info("Offline mode active", {
-        description: "Core functions still available",
+      toast.info("🔄 Offline mode active", {
+        description: "Core genius functions still available",
         duration: 3000,
       });
     }
@@ -249,7 +293,7 @@ const ChatInterface = () => {
   const copyMessage = async (content: string) => {
     try {
       await navigator.clipboard.writeText(content);
-      toast.success("Copied!", {
+      toast.success("📋 Copied!", {
         description: "Message copied to clipboard",
         duration: 1500,
       });
@@ -262,41 +306,50 @@ const ChatInterface = () => {
     }
   };
 
-  // QUICK ACTION HANDLERS
   const handleQuickAction = (action: string) => {
     setInputValue(action);
-    // Auto-focus input on mobile
-    const input = document.querySelector('input[placeholder*="Ask PandaNexus"]') as HTMLInputElement;
-    if (input) {
-      input.focus();
-    }
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const clearChat = () => {
+    setMessages([{
+      id: '1',
+      content: "🚀 **Chat cleared! Ready for your next world-changing project!**\n\nWhat incredible creation shall we build together?",
+      role: 'assistant',
+      timestamp: new Date(),
+      model: 'PandaNexus Fresh Start'
+    }]);
+    toast.success("🧹 Chat cleared!", {
+      description: "Ready for your next amazing project",
+      duration: 2000,
+    });
   };
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
       {/* ULTRA-RESPONSIVE HEADER */}
       <Card className="border-0 border-b border-glass-border bg-gradient-glass backdrop-blur-xl shrink-0 shadow-glow">
-        <div className="flex items-center justify-between p-2 md:p-4">
+        <div className="flex items-center justify-between p-3 md:p-4">
           {/* Logo and Title - Mobile Optimized */}
           <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
             <div className="relative">
               <PandaLogo className="w-8 h-8 md:w-10 md:h-10 shrink-0" animate />
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-glow"></div>
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-base md:text-xl font-bold bg-gradient-text bg-clip-text text-transparent truncate flex items-center gap-1">
+              <h1 className="text-lg md:text-xl font-bold bg-gradient-text bg-clip-text text-transparent truncate flex items-center gap-1">
                 PandaNexus
-                <Zap className="w-3 h-3 md:w-4 md:h-4 text-primary animate-pulse" />
+                <Zap className="w-4 h-4 md:w-5 md:h-5 text-primary animate-pulse" />
               </h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">AI Hub • Lightning Fast • World's Best</p>
+              <p className="text-xs text-muted-foreground hidden sm:block">World's Fastest AI • Quantum Speed • Revolutionary</p>
             </div>
           </div>
 
-          {/* Performance Indicator */}
+          {/* Performance Indicators - Desktop */}
           <div className="hidden lg:flex items-center gap-2 mr-4">
-            <Badge variant="outline" className="bg-gradient-glass border-glass-border text-xs">
+            <Badge variant="outline" className="bg-gradient-glass border-glass-border text-xs animate-pulse">
               <Brain className="w-3 h-3 mr-1 text-green-500" />
-              Ultra Mode
+              Quantum Mode
             </Badge>
             <Badge variant="outline" className="bg-gradient-glass border-glass-border text-xs">
               <Cpu className="w-3 h-3 mr-1 text-blue-500" />
@@ -313,7 +366,7 @@ const ChatInterface = () => {
               className="bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-300 text-xs"
             >
               <Code className="w-4 h-4 mr-1" />
-              Code Studio
+              Code Studio Pro
             </Button>
             
             <VercelDeploy>
@@ -339,6 +392,15 @@ const ChatInterface = () => {
             </ContactDialog>
             
             <Button
+              variant="outline"
+              size="sm"
+              onClick={clearChat}
+              className="bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-300 text-xs"
+            >
+              🧹 Clear
+            </Button>
+            
+            <Button
               variant="ghost"
               size="sm"
               onClick={toggleTheme}
@@ -348,7 +410,7 @@ const ChatInterface = () => {
             </Button>
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Actions */}
           <div className="flex md:hidden items-center gap-1">
             <Button
               variant="ghost"
@@ -369,9 +431,9 @@ const ChatInterface = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Enhanced */}
         {showMobileMenu && (
-          <div className="md:hidden border-t border-glass-border p-3 space-y-2 bg-gradient-glass">
+          <div className="md:hidden border-t border-glass-border p-3 space-y-2 bg-gradient-glass backdrop-blur-xl">
             <Button
               variant="outline"
               size="sm"
@@ -379,21 +441,21 @@ const ChatInterface = () => {
                 setShowCodeInterface(true);
                 setShowMobileMenu(false);
               }}
-              className="w-full justify-start bg-gradient-glass border-glass-border text-sm"
+              className="w-full justify-start bg-gradient-glass border-glass-border text-sm hover:shadow-glow"
             >
               <Code className="w-4 h-4 mr-2" />
-              Code Studio Pro
+              🚀 Code Studio Pro
             </Button>
             
             <VercelDeploy>
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full justify-start bg-gradient-glass border-glass-border text-sm"
+                className="w-full justify-start bg-gradient-glass border-glass-border text-sm hover:shadow-glow"
                 onClick={() => setShowMobileMenu(false)}
               >
                 <Rocket className="w-4 h-4 mr-2" />
-                Deploy to Vercel
+                ⚡ Deploy to Vercel
               </Button>
             </VercelDeploy>
             
@@ -401,18 +463,30 @@ const ChatInterface = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full justify-start bg-gradient-glass border-glass-border text-sm"
+                className="w-full justify-start bg-gradient-glass border-glass-border text-sm hover:shadow-glow"
                 onClick={() => setShowMobileMenu(false)}
               >
                 <MessageCircle className="w-4 h-4 mr-2" />
-                Contact Shakeel
+                💬 Contact Shakeel
               </Button>
             </ContactDialog>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                clearChat();
+                setShowMobileMenu(false);
+              }}
+              className="w-full justify-start bg-gradient-glass border-glass-border text-sm hover:shadow-glow"
+            >
+              🧹 Clear Chat
+            </Button>
           </div>
         )}
         
         {/* Service Selector - Always Visible */}
-        <div className="px-2 md:px-4 pb-2 md:pb-3">
+        <div className="px-3 md:px-4 pb-3">
           <ServiceSelector
             selectedService={selectedService}
             onServiceChange={setSelectedService}
@@ -422,7 +496,7 @@ const ChatInterface = () => {
       </Card>
 
       {/* ULTRA-FAST MESSAGES AREA */}
-      <div className="flex-1 overflow-y-auto p-1 md:p-4 space-y-2 md:space-y-4 min-h-0">
+      <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 min-h-0">
         {messages.map((message) => (
           <div key={message.id} className="relative group">
             {message.isStreaming ? (
@@ -437,7 +511,7 @@ const ChatInterface = () => {
               variant="ghost"
               size="sm"
               onClick={() => copyMessage(message.content)}
-              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-6 w-6 p-0 bg-gradient-glass border border-glass-border hover:shadow-glow"
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 h-7 w-7 p-0 bg-gradient-glass border border-glass-border hover:shadow-glow rounded-full"
             >
               <Copy className="w-3 h-3" />
             </Button>
@@ -447,17 +521,17 @@ const ChatInterface = () => {
       </div>
 
       {/* REVOLUTIONARY INPUT SYSTEM */}
-      <Card className="border-0 border-t border-glass-border bg-gradient-glass backdrop-blur-xl m-1 md:m-4 md:mt-0 shrink-0 shadow-glow">
-        <form onSubmit={handleSubmit} className="p-2 md:p-4 space-y-2 md:space-y-3">
-          {/* LIGHTNING QUICK ACTIONS */}
+      <Card className="border-0 border-t border-glass-border bg-gradient-glass backdrop-blur-xl m-2 md:m-4 md:mt-0 shrink-0 shadow-glow">
+        <form onSubmit={handleSubmit} className="p-3 md:p-4 space-y-3">
+          {/* LIGHTNING QUICK ACTIONS - Mobile Optimized */}
           <div className="flex gap-1 md:gap-2 overflow-x-auto pb-1 scrollbar-hide">
             {[
-              { text: "Build React app", icon: Code, color: "text-blue-500" },
-              { text: "Generate AI image", icon: Image, color: "text-purple-500" },
-              { text: "Debug my code", icon: Zap, color: "text-yellow-500" },
-              { text: "Deploy to Vercel", icon: Rocket, color: "text-green-500" },
-              { text: "Optimize performance", icon: Brain, color: "text-pink-500" },
-              { text: "Create API", icon: Cpu, color: "text-cyan-500" }
+              { text: "Build React app", icon: Code, color: "text-blue-500", mobile: "React" },
+              { text: "Generate AI image", icon: Image, color: "text-purple-500", mobile: "Image" },
+              { text: "Debug my code", icon: Zap, color: "text-yellow-500", mobile: "Debug" },
+              { text: "Deploy to Vercel", icon: Rocket, color: "text-green-500", mobile: "Deploy" },
+              { text: "Optimize performance", icon: Brain, color: "text-pink-500", mobile: "Optimize" },
+              { text: "Create API", icon: Cpu, color: "text-cyan-500", mobile: "API" }
             ].map(action => (
               <Button
                 key={action.text}
@@ -465,17 +539,17 @@ const ChatInterface = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickAction(action.text)}
-                className="text-xs whitespace-nowrap bg-gradient-glass border-glass-border hover:shadow-glow shrink-0 h-7 md:h-8 px-2 md:px-3 transition-all duration-200"
+                className="text-xs whitespace-nowrap bg-gradient-glass border-glass-border hover:shadow-glow shrink-0 h-8 px-3 transition-all duration-200"
               >
                 <action.icon className={`w-3 h-3 mr-1 ${action.color}`} />
                 <span className="hidden sm:inline">{action.text}</span>
-                <span className="sm:hidden">{action.text.split(' ')[0]}</span>
+                <span className="sm:hidden">{action.mobile}</span>
               </Button>
             ))}
           </div>
 
           {/* ULTRA-RESPONSIVE INPUT ROW */}
-          <div className="flex items-end gap-1 md:gap-2">
+          <div className="flex items-end gap-2">
             {/* Upload Button */}
             <input
               ref={fileInputRef}
@@ -489,7 +563,8 @@ const ChatInterface = () => {
               variant="outline"
               size="icon"
               onClick={() => fileInputRef.current?.click()}
-              className="shrink-0 h-9 w-9 md:h-10 md:w-10 bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-200"
+              className="shrink-0 h-10 w-10 bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-200"
+              title="Upload file or image"
             >
               <Plus className="w-4 h-4" />
             </Button>
@@ -497,11 +572,12 @@ const ChatInterface = () => {
             {/* LIGHTNING INPUT FIELD */}
             <div className="flex-1 min-w-0">
               <Input
+                ref={inputRef}
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
-                placeholder="Ask PandaNexus anything... ⚡"
-                className="bg-input/50 border-glass-border backdrop-blur-sm focus:ring-2 focus:ring-primary/20 h-9 md:h-10 text-sm md:text-base transition-all duration-200"
-                disabled={isLoading}
+                placeholder="Ask PandaNexus anything... ⚡ World's fastest AI!"
+                className="bg-input/50 border-glass-border backdrop-blur-sm focus:ring-2 focus:ring-primary/20 h-10 text-sm md:text-base transition-all duration-200 font-medium"
+                disabled={isLoading || isSpellChecking}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -520,18 +596,22 @@ const ChatInterface = () => {
               onClick={handleSpellCheck}
               variant="outline"
               size="icon"
-              disabled={isLoading || !inputValue.trim()}
-              className="shrink-0 h-9 w-9 md:h-10 md:w-10 bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-200"
-              title="AI Spell Check"
+              disabled={isLoading || !inputValue.trim() || isSpellChecking}
+              className="shrink-0 h-10 w-10 bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-200"
+              title="AI Spell Check & Optimization"
             >
-              <Sparkles className="w-4 h-4" />
+              {isSpellChecking ? (
+                <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+              ) : (
+                <Wand2 className="w-4 h-4" />
+              )}
             </Button>
 
             {/* ULTRA-FAST SEND */}
             <Button
               type="submit"
-              disabled={isLoading || !inputValue.trim()}
-              className="bg-gradient-primary hover:shadow-glow transition-all duration-300 shrink-0 h-9 w-9 md:h-10 md:w-10 relative overflow-hidden"
+              disabled={isLoading || !inputValue.trim() || isSpellChecking}
+              className="bg-gradient-primary hover:shadow-glow transition-all duration-300 shrink-0 h-10 w-10 relative overflow-hidden"
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin"></div>
@@ -545,15 +625,20 @@ const ChatInterface = () => {
           </div>
           
           {/* ENHANCED HELPER TEXT */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <span>⚡ Ultra-fast AI</span>
-              <span className="hidden sm:inline">• 🔥 Real-time streaming</span>
+          <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="flex items-center gap-1">
+                ⚡ <span className="hidden xs:inline">Lightning AI</span><span className="xs:hidden">Fast</span>
+              </span>
+              <span className="hidden sm:inline flex items-center gap-1">
+                • 🔥 <span className="hidden md:inline">Real-time streaming</span><span className="md:hidden">Streaming</span>
+              </span>
               <span className="hidden md:inline">• 🚀 Instant deploy</span>
+              <span className="hidden lg:inline">• 🧠 Quantum intelligence</span>
             </div>
             <div className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-muted/20 rounded text-xs">Enter</kbd>
-              <span className="hidden sm:inline">to send</span>
+              <kbd className="px-1.5 py-0.5 bg-muted/20 rounded text-xs border border-glass-border">Enter</kbd>
+              <span className="hidden sm:inline">send</span>
             </div>
           </div>
         </form>

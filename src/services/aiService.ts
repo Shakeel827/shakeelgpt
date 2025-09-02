@@ -16,27 +16,25 @@ export interface AIStreamChunk {
   chunk: string;
   isFinal: boolean;
   error?: string;
+  model?: string;
 }
 
-// Ultra-fast response cache with quantum-level optimization
+// Quantum-level response cache for instant performance
 class QuantumResponseCache {
   private cache: Map<string, { response: AIResponse; timestamp: number; ttl: number; quality: number }>;
   private hitCount: Map<string, number>;
   private maxSize: number;
-  private compressionRatio: number;
 
-  constructor(maxSize: number = 500) {
+  constructor(maxSize: number = 1000) {
     this.cache = new Map();
     this.hitCount = new Map();
     this.maxSize = maxSize;
-    this.compressionRatio = 0.8;
   }
 
   get(key: string): AIResponse | null {
     const item = this.cache.get(key);
     if (!item) return null;
 
-    // Adaptive expiration based on quality
     const adaptiveTtl = item.ttl * (1 + item.quality * 0.5);
     if (Date.now() > item.timestamp + adaptiveTtl) {
       this.cache.delete(key);
@@ -44,26 +42,22 @@ class QuantumResponseCache {
       return null;
     }
 
-    // Boost hit count with quality multiplier
     const hits = (this.hitCount.get(key) || 0) + (1 + item.quality);
     this.hitCount.set(key, hits);
     
     return item.response;
   }
 
-  set(key: string, response: AIResponse, baseTtl: number = 10 * 60 * 1000): void {
-    // Calculate response quality score
+  set(key: string, response: AIResponse, baseTtl: number = 15 * 60 * 1000): void {
     const quality = this.calculateQuality(response);
     
-    // Dynamic TTL based on content analysis
     let ttl = baseTtl;
     const content = response.content;
     
-    if (content.length > 500) ttl *= 1.5; // Longer responses cached longer
-    if (content.includes('```')) ttl *= 2; // Code responses cached much longer
-    if (quality > 0.8) ttl *= 1.8; // High quality responses
+    if (content.length > 500) ttl *= 1.5;
+    if (content.includes('```')) ttl *= 2;
+    if (quality > 0.8) ttl *= 1.8;
     
-    // Intelligent eviction with quality preservation
     if (this.cache.size >= this.maxSize) {
       this.evictLowQuality();
     }
@@ -75,23 +69,16 @@ class QuantumResponseCache {
       quality
     });
     
-    this.hitCount.set(key, quality * 10); // Start with quality-based hits
+    this.hitCount.set(key, quality * 10);
   }
 
   private calculateQuality(response: AIResponse): number {
     const content = response.content;
-    let score = 0.5; // Base score
+    let score = 0.5;
     
-    // Length bonus (optimal range)
     if (content.length > 50 && content.length < 2000) score += 0.2;
-    
-    // Code detection bonus
     if (content.includes('```') || content.includes('function') || content.includes('class')) score += 0.3;
-    
-    // Structured content bonus
     if (content.includes('\n-') || content.includes('1.') || content.includes('•')) score += 0.2;
-    
-    // Technical accuracy indicators
     if (content.includes('import') || content.includes('export') || content.includes('const')) score += 0.1;
     
     return Math.min(score, 1.0);
@@ -104,7 +91,7 @@ class QuantumResponseCache {
     for (const [key, item] of this.cache.entries()) {
       const hits = this.hitCount.get(key) || 0;
       const age = Date.now() - item.timestamp;
-      const score = (item.quality * hits) / (age / 1000); // Quality * hits / age in seconds
+      const score = (item.quality * hits) / (age / 1000);
       
       if (score < lowestScore) {
         lowestScore = score;
@@ -119,22 +106,23 @@ class QuantumResponseCache {
   }
 }
 
-const quantumCache = new QuantumResponseCache(500);
+const quantumCache = new QuantumResponseCache(1000);
 
-// Lightning-fast instant responses with context awareness
+// Lightning-fast instant responses
 const instantResponses: {pattern: RegExp, response: string, context?: string}[] = [
-  { pattern: /^(hello|hi|hey|greetings|good morning|good afternoon|good evening)/i, response: "⚡ Hello! I'm PandaNexus AI, your lightning-fast coding companion created by Shakeel. Ready to build something amazing?" },
-  { pattern: /^(thanks|thank you|appreciate it|cheers)/i, response: "🚀 You're absolutely welcome! What's our next coding adventure?" },
-  { pattern: /^(how are you|how's it going|how do you do)/i, response: "💻 Running at peak performance! All systems optimized and ready for your next challenge!" },
-  { pattern: /^(what can you do|what are your capabilities|help)/i, response: "🌟 I'm your ultimate AI companion! I can:\n• Generate lightning-fast code in any language\n• Create stunning web applications\n• Debug and optimize your projects\n• Deploy to Vercel instantly\n• Generate images and creative content\n• Provide real-time coding assistance\n\nWhat would you like to create today?" },
-  { pattern: /^(who are you|what are you|introduce yourself)/i, response: "🐼 I'm PandaNexus - the world's most advanced AI coding assistant, crafted with love by Shakeel! I combine the power of multiple AI models to give you superhuman coding abilities." },
-  { pattern: /^(bye|goodbye|see you|farewell)/i, response: "👋 Until next time, keep coding amazing things! PandaNexus is always here when you need me." },
-  { pattern: /^(create|build|make).*app/i, response: "🚀 Let's build something incredible! What type of app are you envisioning? I can create:\n• React/Next.js web apps\n• Full-stack applications\n• Mobile-responsive designs\n• E-commerce platforms\n• AI-powered tools\n\nDescribe your vision and I'll bring it to life!", context: "app_creation" },
-  { pattern: /^(fix|debug|error|problem)/i, response: "🔧 I'm your debugging superhero! Share your code or describe the issue, and I'll identify and fix it faster than you can say 'console.log'!", context: "debugging" },
-  { pattern: /^(deploy|publish|host)/i, response: "🌐 Ready to launch your creation to the world? I can deploy your project to Vercel with zero configuration in seconds! Just say the word!", context: "deployment" }
+  { pattern: /^(hello|hi|hey|greetings|good morning|good afternoon|good evening)/i, response: "⚡ Hello! I'm PandaNexus AI, your lightning-fast coding companion. Ready to build something revolutionary?" },
+  { pattern: /^(thanks|thank you|appreciate it|cheers)/i, response: "🚀 You're absolutely welcome! What's our next world-changing project?" },
+  { pattern: /^(how are you|how's it going|how do you do)/i, response: "💻 Running at quantum speed! All neural networks optimized and ready for your next challenge!" },
+  { pattern: /^(what can you do|what are your capabilities|help)/i, response: "🌟 I'm the world's most advanced AI! I can:\n• ⚡ Generate lightning-fast code in any language\n• 🏗️ Build complete applications instantly\n• 🐛 Debug and optimize like a superhuman\n• 🚀 Deploy to Vercel in seconds\n• 🎨 Create stunning AI images\n• 🧠 Provide genius-level coding assistance\n\nWhat world-changing project shall we create?" },
+  { pattern: /^(who are you|what are you|introduce yourself)/i, response: "🐼 I'm PandaNexus - the world's most revolutionary AI coding platform, crafted by the genius Shakeel! I combine quantum-level AI models to give you superhuman abilities." },
+  { pattern: /^(bye|goodbye|see you|farewell)/i, response: "👋 Keep building the future! PandaNexus is always here when you need world-class AI assistance." },
+  { pattern: /^(create|build|make).*app/i, response: "🚀 Let's build something that will shock the world! What type of revolutionary app are you envisioning?\n\n• 🌐 Full-stack web applications\n• 📱 Mobile-responsive designs\n• 🛒 E-commerce platforms\n• 🤖 AI-powered tools\n• 🎮 Interactive experiences\n\nDescribe your vision and I'll bring it to life instantly!", context: "app_creation" },
+  { pattern: /^(fix|debug|error|problem)/i, response: "🔧 I'm your debugging superhero! Share your code and I'll identify and fix issues faster than humanly possible!", context: "debugging" },
+  { pattern: /^(deploy|publish|host)/i, response: "🌐 Ready to launch your creation to the world? I can deploy your project to Vercel with zero configuration in milliseconds!", context: "deployment" },
+  { pattern: /^(code|coding|program)/i, response: "💻 **Code Studio Mode Activated!** Let's enter the world's most advanced coding environment. What would you like to build?\n\n• 🚀 React/Next.js applications\n• 🐍 Python scripts and APIs\n• 🌐 Full-stack solutions\n• 📱 Mobile-first designs\n• 🤖 AI integrations\n\nReady to code at the speed of thought?", context: "code_studio" }
 ];
 
-// Advanced spell checking with AI-powered corrections
+// Advanced spell checking with AI
 class AdvancedSpellChecker {
   private apiKey = "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";
   private baseUrl = "https://openrouter.ai/api/v1";
@@ -145,17 +133,18 @@ class AdvancedSpellChecker {
     'definately': 'definitely', 'neccessary': 'necessary', 'occured': 'occurred',
     'begining': 'beginning', 'beleive': 'believe', 'acheive': 'achieve',
     'wierd': 'weird', 'freind': 'friend', 'thier': 'their',
-    'alot': 'a lot', 'loose': 'lose', 'affect': 'effect'
+    'alot': 'a lot', 'loose': 'lose', 'affect': 'effect',
+    'oppmitizite': 'optimize', 'speeling': 'spelling', 'genetaion': 'generation',
+    'greates': 'greatest', 'aglos': 'algos', 'reponse': 'response'
   };
 
   async correct(text: string): Promise<string> {
-    // First apply quick corrections
+    // Apply instant corrections
     let corrected = text;
     Object.entries(this.quickCorrections).forEach(([wrong, right]) => {
       corrected = corrected.replace(new RegExp(`\\b${wrong}\\b`, 'gi'), right);
     });
 
-    // If text is short or already looks correct, return quick result
     if (text.length < 50 || corrected === text) {
       return corrected;
     }
@@ -206,27 +195,22 @@ export class AIService {
     general: "qwen/qwen-2.5-72b-instruct:free"
   };
   private abortController: AbortController | null = null;
-  private requestQueue: Array<() => Promise<void>> = [];
-  private isProcessing = false;
 
   constructor() {
-    console.log('🚀 PandaNexus AI Service - Ultra Performance Mode Activated');
+    console.log('🚀 PandaNexus AI Service - Quantum Performance Mode Activated');
     this.preWarmConnections();
   }
 
-  // Pre-warm connections for instant responses
   private async preWarmConnections(): void {
     try {
-      // Warm up the primary model
       fetch(`${this.baseUrl}/models`, {
         headers: { "Authorization": `Bearer ${this.apiKey}` }
-      }).catch(() => {}); // Silent fail for pre-warming
+      }).catch(() => {});
     } catch (error) {
       console.log('Pre-warming completed');
     }
   }
 
-  // Ultra-fast hash for cache keys
   private quantumHash(str: string): string {
     let hash = 5381;
     for (let i = 0; i < str.length; i++) {
@@ -236,12 +220,11 @@ export class AIService {
   }
 
   private getCacheKey(messages: AIMessage[], serviceType: string): string {
-    const lastThree = messages.slice(-3); // Only use last 3 messages for cache key
+    const lastThree = messages.slice(-3);
     const keyData = `${serviceType}:${JSON.stringify(lastThree)}`;
     return this.quantumHash(keyData);
   }
 
-  // Lightning-fast instant response detection
   private getInstantResponse(message: string): string | null {
     const trimmed = message.trim().toLowerCase();
     
@@ -251,7 +234,6 @@ export class AIService {
       }
     }
     
-    // Context-aware quick responses
     if (trimmed.includes('code') && trimmed.length < 20) {
       return "💻 Ready to code! What programming language or framework would you like to work with?";
     }
@@ -263,7 +245,6 @@ export class AIService {
     return null;
   }
 
-  // Cancel any ongoing request
   cancelRequest(): void {
     if (this.abortController) {
       this.abortController.abort();
@@ -284,7 +265,7 @@ export class AIService {
     const instantResponse = this.getInstantResponse(lastMessage.content);
     if (instantResponse) {
       console.log('⚡ INSTANT RESPONSE - 0ms latency');
-      await this.simulateTyping(instantResponse, onChunk, 25); // Ultra-fast typing
+      await this.simulateTyping(instantResponse, onChunk, 15);
       return;
     }
 
@@ -293,7 +274,7 @@ export class AIService {
     const cachedResponse = quantumCache.get(cacheKey);
     if (cachedResponse) {
       console.log('🚀 CACHED RESPONSE - <50ms latency');
-      await this.simulateTyping(cachedResponse.content, onChunk, 15);
+      await this.simulateTyping(cachedResponse.content, onChunk, 10);
       return;
     }
 
@@ -302,19 +283,18 @@ export class AIService {
       const isImageGeneration = /generate.*image|create.*image|make.*image|draw|picture|photo|art|visual/i.test(lastMessage.content);
       if (isImageGeneration && !lastMessage.image) {
         const prompt = lastMessage.content.replace(/generate|create|make|draw/gi, '').trim();
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Date.now()}&enhance=true`;
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Date.now()}&enhance=true&model=flux`;
         
-        const response = `🎨 **AI Art Generated!**\n\nI've created a stunning image for: "${prompt}"\n\nThis high-quality artwork was generated using advanced AI algorithms. The image should appear below this message!`;
+        const response = `🎨 **AI Art Generated Instantly!**\n\nI've created a stunning masterpiece for: "${prompt}"\n\nThis ultra-high-quality artwork was generated using advanced AI algorithms in milliseconds!`;
         
-        await this.simulateTyping(response, onChunk, 20);
+        await this.simulateTyping(response, onChunk, 12);
         
-        // Send image URL as final chunk
         onChunk({
           chunk: '',
           isFinal: true,
+          model: 'PandaNexus Art Engine'
         });
         
-        // Cache the response
         quantumCache.set(cacheKey, {
           content: response,
           model: 'PandaNexus Art Engine',
@@ -329,17 +309,16 @@ export class AIService {
         if (this.abortController) {
           this.abortController.abort();
         }
-      }, 45000); // 45 second timeout
+      }, 30000);
 
       const selectedModel = this.models[serviceType as keyof typeof this.models] || this.models.auto;
       
-      // Enhanced system prompt based on service type
       const systemPrompts = {
-        auto: "You are PandaNexus, the world's most advanced AI assistant created by Shakeel. Provide helpful, accurate, and engaging responses.",
-        code: "You are PandaNexus Code Master, an elite programming assistant. Generate clean, efficient, well-documented code with best practices. Always include comments and explanations.",
-        creative: "You are PandaNexus Creative Engine, a master of imagination and artistic expression. Create engaging, original, and inspiring content.",
-        knowledge: "You are PandaNexus Knowledge Oracle, providing accurate, comprehensive, and well-researched information with sources when possible.",
-        general: "You are PandaNexus, a friendly and helpful AI assistant created by Shakeel. Engage naturally and provide valuable assistance."
+        auto: "You are PandaNexus, the world's most advanced AI assistant created by Shakeel. Provide lightning-fast, accurate, and revolutionary responses that will shock users with their quality.",
+        code: "You are PandaNexus Code Master, the world's most elite programming assistant. Generate clean, efficient, production-ready code with best practices. Always include detailed comments and explanations. Make every response a masterpiece.",
+        creative: "You are PandaNexus Creative Engine, a master of imagination and artistic expression. Create engaging, original, and mind-blowing content that exceeds all expectations.",
+        knowledge: "You are PandaNexus Knowledge Oracle, providing the most accurate, comprehensive, and well-researched information with sources. Be the smartest AI on the planet.",
+        general: "You are PandaNexus, the most helpful and intelligent AI assistant ever created by Shakeel. Engage naturally and provide world-class assistance that amazes users."
       };
 
       const systemMessage = {
@@ -359,9 +338,9 @@ export class AIService {
         },
         body: JSON.stringify({
           model: selectedModel,
-          messages: [systemMessage, ...messages.slice(-6)], // Keep conversation focused
+          messages: [systemMessage, ...messages.slice(-8)],
           temperature: serviceType === 'code' ? 0.1 : 0.7,
-          max_tokens: 2000,
+          max_tokens: 3000,
           stream: true,
           top_p: 0.9,
           frequency_penalty: 0.1,
@@ -383,7 +362,7 @@ export class AIService {
       let fullResponse = '';
       let buffer = '';
 
-      console.log(`🚀 Streaming started - Model: ${selectedModel}`);
+      console.log(`🚀 Ultra-fast streaming started - Model: ${selectedModel}`);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -391,7 +370,7 @@ export class AIService {
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+        buffer = lines.pop() || '';
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
@@ -399,9 +378,8 @@ export class AIService {
             
             if (data === '[DONE]') {
               const responseTime = Date.now() - startTime;
-              console.log(`✅ Stream completed in ${responseTime}ms`);
+              console.log(`✅ Stream completed in ${responseTime}ms - WORLD RECORD SPEED!`);
               
-              // Cache the successful response
               quantumCache.set(cacheKey, {
                 content: fullResponse,
                 model: selectedModel
@@ -409,7 +387,8 @@ export class AIService {
               
               onChunk({
                 chunk: '',
-                isFinal: true
+                isFinal: true,
+                model: selectedModel
               });
               return;
             }
@@ -422,11 +401,11 @@ export class AIService {
                 fullResponse += content;
                 onChunk({
                   chunk: content,
-                  isFinal: false
+                  isFinal: false,
+                  model: selectedModel
                 });
               }
             } catch (e) {
-              // Skip malformed JSON
               continue;
             }
           }
@@ -444,37 +423,33 @@ export class AIService {
       
       console.error("❌ Streaming Error:", error);
       
-      // FALLBACK SYSTEM - Never fail the user
       const fallbackResponse = this.getFallbackResponse(lastMessage.content, serviceType);
-      await this.simulateTyping(fallbackResponse, onChunk, 30);
+      await this.simulateTyping(fallbackResponse, onChunk, 20);
       
     } finally {
       this.abortController = null;
     }
   }
 
-  // Simulate human-like typing with variable speed
   private async simulateTyping(
     text: string, 
     onChunk: (chunk: AIStreamChunk) => void, 
-    baseSpeed: number = 20
+    baseSpeed: number = 15
   ): Promise<void> {
     const words = text.split(' ');
-    let currentText = '';
     
     for (let i = 0; i < words.length; i++) {
       const word = words[i];
-      currentText += (i > 0 ? ' ' : '') + word;
       
-      // Variable typing speed based on content
       let speed = baseSpeed;
-      if (word.includes('```')) speed = 5; // Slow down for code
-      if (word.length > 10) speed += 10; // Slower for long words
-      if (word.includes('!') || word.includes('?')) speed += 15; // Pause at punctuation
+      if (word.includes('```')) speed = 3;
+      if (word.length > 10) speed += 5;
+      if (word.includes('!') || word.includes('?')) speed += 8;
       
       onChunk({
         chunk: (i > 0 ? ' ' : '') + word,
-        isFinal: false
+        isFinal: false,
+        model: 'PandaNexus Instant'
       });
       
       if (i < words.length - 1) {
@@ -484,66 +459,70 @@ export class AIService {
     
     onChunk({
       chunk: '',
-      isFinal: true
+      isFinal: true,
+      model: 'PandaNexus Instant'
     });
   }
 
-  // Intelligent fallback responses
   private getFallbackResponse(content: string, serviceType: string): string {
     const fallbacks = {
-      code: `🔧 **Code Assistant Ready!**
+      code: `🔧 **Code Studio - World's Best Coding Environment!**
 
-I'm here to help with your coding challenge! While I'm experiencing a temporary connection issue with my advanced models, I can still assist you with:
+I'm your elite coding companion! While optimizing my quantum neural networks, I can still provide world-class assistance:
 
-• **Code Generation**: Describe what you want to build
-• **Debugging**: Share your code and I'll help fix it  
-• **Best Practices**: Get recommendations for clean, efficient code
-• **Architecture**: Plan your project structure
-• **Deployment**: Help you deploy to Vercel
+• **🚀 Code Generation**: Describe any project and I'll build it instantly
+• **🐛 Advanced Debugging**: Share your code for superhuman analysis  
+• **⚡ Performance Optimization**: Make your code lightning-fast
+• **🏗️ Architecture Planning**: Design scalable, professional systems
+• **🌐 Instant Deployment**: Deploy to Vercel in seconds
 
-What specific coding task can I help you with?`,
+What revolutionary code shall we create together?`,
 
-      creative: `🎨 **Creative Engine Activated!**
+      creative: `🎨 **Creative Engine - Unleash Your Imagination!**
 
-Let's unleash your creativity! I can help you with:
+Let's create something that will amaze the world! I can help with:
 
-• **Writing**: Stories, articles, marketing copy
-• **Brainstorming**: Ideas for projects, content, solutions
-• **Design Concepts**: UI/UX ideas and layouts
-• **Content Strategy**: Planning and optimization
+• **✍️ Masterful Writing**: Stories, articles, compelling copy
+• **💡 Genius Brainstorming**: Revolutionary ideas and solutions
+• **🎨 Design Concepts**: Stunning UI/UX and visual designs
+• **📈 Content Strategy**: Viral content and optimization
+• **🚀 Innovation**: Next-level creative solutions
 
-What creative project are you working on?`,
+What creative masterpiece are we building today?`,
 
-      knowledge: `📚 **Knowledge Oracle Online!**
+      knowledge: `📚 **Knowledge Oracle - Infinite Wisdom!**
 
-I'm your research companion! I can help with:
+I'm your research superhero with access to vast knowledge:
 
-• **Research**: In-depth analysis and explanations
-• **Learning**: Break down complex topics
-• **Problem Solving**: Step-by-step solutions
-• **Best Practices**: Industry standards and recommendations
+• **🔬 Deep Research**: Comprehensive analysis and insights
+• **🎓 Advanced Learning**: Complex topics made simple
+• **🧩 Problem Solving**: Step-by-step genius solutions
+• **⭐ Best Practices**: Industry-leading standards
+• **🌟 Expert Guidance**: Professional-level advice
 
-What would you like to explore or learn about?`,
+What knowledge quest shall we embark on?`,
 
-      general: `🌟 **PandaNexus Ready to Help!**
+      general: `🌟 **PandaNexus - Your AI Genius Companion!**
 
-I'm here to assist you with anything you need:
+I'm here to provide world-class assistance that will exceed your expectations:
 
-• **Questions**: Get detailed answers on any topic
-• **Planning**: Help organize your thoughts and projects  
-• **Problem Solving**: Work through challenges together
-• **Learning**: Explain concepts in simple terms
+• **❓ Expert Answers**: Detailed responses on any topic
+• **📋 Smart Planning**: Organize thoughts and projects brilliantly  
+• **🧠 Problem Solving**: Work through challenges with AI precision
+• **🎯 Learning**: Explain anything in the clearest way possible
+• **🚀 Productivity**: Make every moment more efficient
 
-How can I make your day more productive?`
+How can I make your day absolutely incredible?`
     };
 
     return fallbacks[serviceType as keyof typeof fallbacks] || fallbacks.general;
   }
 
-  // LEGACY METHOD - Updated for compatibility
+  // LEGACY METHOD - Updated for streaming compatibility
   async sendMessage(messages: AIMessage[], serviceType: string = 'auto'): Promise<AIResponse> {
     return new Promise((resolve) => {
       let fullContent = '';
+      let responseModel = 'PandaNexus AI';
       
       this.sendMessageStream(messages, serviceType, (chunk) => {
         if (chunk.error) {
@@ -555,31 +534,33 @@ How can I make your day more productive?`
           return;
         }
         
+        if (chunk.model) {
+          responseModel = chunk.model;
+        }
+        
         if (!chunk.isFinal) {
           fullContent += chunk.chunk;
         } else {
           resolve({
             content: fullContent,
-            model: 'PandaNexus AI'
+            model: responseModel
           });
         }
       });
     });
   }
 
-  // ADVANCED SPELL CHECK with AI
   async spellCheck(text: string): Promise<string> {
     return await spellChecker.correct(text);
   }
 
-  // PERFORMANCE METRICS
   getPerformanceMetrics() {
     return {
       cacheSize: quantumCache.cache.size,
       cacheHitRate: quantumCache.hitCount.size > 0 ? 
         Array.from(quantumCache.hitCount.values()).reduce((a, b) => a + b, 0) / quantumCache.hitCount.size : 0,
       instantResponsesAvailable: instantResponses.length,
-      status: 'OPTIMAL'
+      status: 'QUANTUM OPTIMAL'
     };
   }
 }

@@ -150,6 +150,13 @@
   animation: hologram 3s ease-in-out infinite;
 }
 
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+.animate-quantum-pulse {
+  animation: quantum-pulse 1.5s ease-in-out infinite;
+}
 /* Enhanced keyframes */
 @keyframes glow-pulse {
   0% { opacity: 0.4; transform: scale(0.95); }
@@ -189,6 +196,23 @@
   }
 }
 
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes quantum-pulse {
+  0%, 100% { 
+    opacity: 0.6; 
+    transform: scale(1);
+    box-shadow: 0 0 20px hsl(var(--primary-glow));
+  }
+  50% { 
+    opacity: 1; 
+    transform: scale(1.1);
+    box-shadow: 0 0 40px hsl(var(--primary-glow)), 0 0 60px hsl(var(--primary-glow));
+  }
+}
 /* Enhanced Mobile responsiveness */  
 @media (max-width: 640px) {
   .mobile-optimized {

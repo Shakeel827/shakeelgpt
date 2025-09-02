@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import PandaLogo from "./PandaLogo";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Brain } from "lucide-react";
+import { Zap, Brain, Cpu, Sparkles } from "lucide-react";
 
 interface StreamingMessageProps {
   message: {
@@ -19,9 +19,11 @@ interface StreamingMessageProps {
 const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) => {
   const [showCursor, setShowCursor] = useState(true);
   const [displayedContent, setDisplayedContent] = useState(message.content);
+  const [charCount, setCharCount] = useState(0);
   
   useEffect(() => {
     setDisplayedContent(message.content);
+    setCharCount(message.content.length);
   }, [message.content]);
 
   useEffect(() => {
@@ -32,7 +34,7 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
 
     const interval = setInterval(() => {
       setShowCursor(prev => !prev);
-    }, 500);
+    }, 400); // Faster cursor blink
 
     return () => clearInterval(interval);
   }, [isActive]);
@@ -44,10 +46,13 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
     <div className={`flex gap-2 md:gap-3 p-2 md:p-4 animate-fade-in ${isUser ? 'justify-end' : 'justify-start'}`}>
       {!isUser && (
         <div className="flex-shrink-0">
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow relative">
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow relative overflow-hidden">
             <PandaLogo className="w-4 h-4 md:w-6 md:h-6" animate={isActive} />
             {isActive && (
-              <div className="absolute -inset-1 border-2 border-primary/30 rounded-full animate-spin"></div>
+              <>
+                <div className="absolute -inset-1 border-2 border-primary/30 rounded-full animate-spin"></div>
+                <div className="absolute -inset-2 border border-primary/20 rounded-full animate-ping"></div>
+              </>
             )}
           </div>
         </div>
@@ -63,9 +68,12 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
           p-3 md:p-4 transition-all duration-300 hover:shadow-glow
         `}>
           
-          {/* Streaming indicator */}
+          {/* Enhanced streaming indicators */}
           {isActive && !isUser && (
-            <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-primary animate-pulse"></div>
+            <>
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-primary animate-pulse"></div>
+              <div className="absolute top-0 left-0 h-0.5 bg-white/50 animate-shimmer" style={{width: `${Math.min((charCount / 1000) * 100, 100)}%`}}></div>
+            </>
           )}
 
           {/* User uploaded image */}
@@ -74,22 +82,28 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
               <img 
                 src={message.image} 
                 alt="User uploaded" 
-                className="max-w-full max-h-64 rounded-lg transition-transform duration-300 hover:scale-105 cursor-pointer object-cover" 
+                className="max-w-full max-h-64 rounded-lg transition-transform duration-300 hover:scale-105 cursor-pointer object-cover shadow-glow" 
               />
             </div>
           )}
 
           {/* AI generated image */}
           {message.imageUrl && (
-            <div className="mb-3 group">
+            <div className="mb-3 group relative">
               <img 
                 src={message.imageUrl} 
-                alt="AI generated" 
-                className="max-w-full max-h-64 rounded-lg transition-transform duration-300 hover:scale-105 cursor-pointer object-cover shadow-glow" 
+                alt="AI generated masterpiece" 
+                className="max-w-full max-h-64 rounded-lg transition-transform duration-300 hover:scale-105 cursor-pointer object-cover shadow-intense" 
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
               />
+              <div className="absolute top-2 left-2">
+                <Badge className="bg-gradient-primary text-primary-foreground text-xs">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  AI Generated
+                </Badge>
+              </div>
             </div>
           )}
           
@@ -101,7 +115,7 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
               <code className="relative">
                 {displayedContent}
                 {isActive && showCursor && (
-                  <span className="animate-pulse ml-1 text-primary font-bold">▋</span>
+                  <span className="animate-pulse ml-1 text-primary font-bold text-lg">▋</span>
                 )}
               </code>
             </pre>
@@ -115,7 +129,8 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
                     // Enhanced markdown-like formatting
                     if (line.trim().startsWith('**') && line.trim().endsWith('**')) {
                       return (
-                        <div key={index} className="font-bold text-primary mb-2 text-base md:text-lg">
+                        <div key={index} className="font-bold text-primary mb-2 text-base md:text-lg flex items-center gap-2">
+                          <Sparkles className="w-4 h-4" />
                           {line.replace(/\*\*/g, '')}
                         </div>
                       );
@@ -124,7 +139,7 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
                     if (line.trim().startsWith('•') || line.trim().startsWith('-')) {
                       return (
                         <div key={index} className="flex items-start gap-2 ml-2 mb-1">
-                          <span className="text-primary mt-1 text-xs font-bold">●</span>
+                          <span className="text-primary mt-1 text-xs font-bold animate-pulse">●</span>
                           <span className="flex-1 break-words">{line.replace(/^[•\-]\s*/, '')}</span>
                         </div>
                       );
@@ -147,14 +162,21 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
               {isActive && (
                 <Badge variant="outline" className="bg-gradient-glass border-glass-border text-xs animate-pulse">
                   <Zap className="w-3 h-3 mr-1" />
-                  Streaming
+                  <span className="hidden sm:inline">Streaming</span>
+                  <span className="sm:hidden">Live</span>
+                </Badge>
+              )}
+              {charCount > 0 && isActive && (
+                <Badge variant="outline" className="bg-gradient-glass border-glass-border text-xs">
+                  {charCount} chars
                 </Badge>
               )}
             </div>
             {message.model && (
               <span className="text-xs text-muted-foreground truncate ml-2 flex items-center gap-1">
                 <Brain className="w-3 h-3" />
-                {message.model}
+                <span className="hidden sm:inline">{message.model}</span>
+                <span className="sm:hidden">{message.model.split(' ')[0]}</span>
               </span>
             )}
           </div>
@@ -163,7 +185,7 @@ const StreamingMessage = ({ message, isActive = true }: StreamingMessageProps) =
       
       {isUser && (
         <div className="flex-shrink-0">
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-secondary flex items-center justify-center border border-border">
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-secondary flex items-center justify-center border border-border shadow-glow">
             <span className="text-sm font-medium">👤</span>
           </div>
         </div>
