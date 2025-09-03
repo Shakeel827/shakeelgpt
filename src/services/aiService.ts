@@ -120,7 +120,7 @@ const instantResponses: {pattern: RegExp, response: string}[] = [
 ];
 
 export class AIService {
-  private baseUrl = "http://0.0.0.0:3001";
+  private baseUrl = "http://localhost:3001/";
   private abortController: AbortController | null = null;
   private isConnected = false;
 
