@@ -31,17 +31,17 @@ type ServiceType = 'auto' | 'code' | 'creative' | 'knowledge' | 'general';
 const ChatInterface = () => {
   const { theme, toggleTheme } = useTheme();
   const [messages, setMessages] = useState<Message[]>(() => {
-    // Load from localStorage if available
-    const saved = localStorage.getItem('chat-messages');
-    if (saved) {
+    // Load messages from localStorage if available
+    const savedMessages = localStorage.getItem('pandanexus-chat-history');
+    if (savedMessages) {
       try {
-        const parsed = JSON.parse(saved);
+        const parsed = JSON.parse(savedMessages);
         return parsed.map((msg: any) => ({
           ...msg,
           timestamp: new Date(msg.timestamp)
         }));
       } catch (e) {
-        console.error('Failed to parse saved messages', e);
+        console.error('Error loading chat history:', e);
       }
     }
     
@@ -56,6 +56,7 @@ const ChatInterface = () => {
       }
     ];
   });
+  
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedService, setSelectedService] = useState<ServiceType>('auto');
@@ -70,7 +71,7 @@ const ChatInterface = () => {
 
   // Save messages to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('chat-messages', JSON.stringify(messages));
+    localStorage.setItem('pandanexus-chat-history', JSON.stringify(messages));
   }, [messages]);
 
   const scrollToBottom = () => {
@@ -197,7 +198,7 @@ const ChatInterface = () => {
       timestamp: new Date()
     };
 
-    // Add user message to history
+    // Add user message to chat history
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
@@ -214,12 +215,12 @@ const ChatInterface = () => {
       isStreaming: true
     };
     
-    // Add streaming message to history
+    // Add streaming message to chat history
     setMessages(prev => [...prev, streamingMessage]);
 
     try {
-      // Use only recent messages for context to avoid overload
-      const recentMessages = messages.slice(-6); // Last 3 exchanges
+      // Use only the last few messages to avoid context overload
+      const recentMessages = messages.slice(-10); // Last 5 exchanges
       const conversationHistory = [...recentMessages, userMessage].map(m => ({
         role: m.role,
         content: m.content,
@@ -330,7 +331,7 @@ const ChatInterface = () => {
   };
 
   const clearChat = () => {
-    // Clear all messages except the welcome message
+    // Keep only the welcome message
     setMessages([
       {
         id: '1',
