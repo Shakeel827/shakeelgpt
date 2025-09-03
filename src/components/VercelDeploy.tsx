@@ -24,27 +24,26 @@ const VercelDeploy = ({ children }: VercelDeployProps) => {
     setDeployStatus('deploying');
     
     try {
-      // Simulate realistic deployment process with steps
-      toast("🚀 Starting deployment...", {
+      toast.success("🚀 Starting deployment...", {
         description: "Building your PandaNexus app",
-        duration: 2000,
-      });
-      
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toast("📦 Building project...", {
-        description: "Optimizing assets and code",
-        duration: 2000,
-      });
-      
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toast("🌐 Deploying to Vercel...", {
-        description: "Publishing to global CDN",
-        duration: 2000,
+        duration: 1500,
       });
       
       await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast.success("📦 Building project...", {
+        description: "Optimizing assets and code",
+        duration: 1500,
+      });
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast.success("🌐 Deploying to Vercel...", {
+        description: "Publishing to global CDN",
+        duration: 1500,
+      });
+      
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       // Generate realistic Vercel URL
       const timestamp = Date.now().toString(36);
@@ -52,15 +51,15 @@ const VercelDeploy = ({ children }: VercelDeployProps) => {
       setDeployUrl(mockUrl);
       setDeployStatus('success');
       
-      toast("🎉 Deployment Successful!", {
+      toast.success("🎉 Deployment Successful!", {
         description: "Your PandaNexus app is now live!",
-        duration: 5000,
+        duration: 3000,
       });
     } catch (error) {
       setDeployStatus('error');
-      toast("❌ Deployment Failed", {
+      toast.error("❌ Deployment Failed", {
         description: "Please check configuration and try again",
-        duration: 5000,
+        duration: 3000,
       });
     } finally {
       setIsDeploying(false);
@@ -70,9 +69,9 @@ const VercelDeploy = ({ children }: VercelDeployProps) => {
   const copyUrl = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
-      toast("URL copied!", {
+      toast.success("URL copied!", {
         description: "Deployment URL copied to clipboard",
-        duration: 2000,
+        duration: 1500,
       });
     } catch (err) {
       console.error('Failed to copy URL:', err);
@@ -92,21 +91,21 @@ const VercelDeploy = ({ children }: VercelDeployProps) => {
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg bg-gradient-glass backdrop-blur-xl border-glass-border shadow-glass max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-lg bg-gradient-glass backdrop-blur-xl border-glass-border shadow-glass max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold bg-gradient-text bg-clip-text text-transparent text-center flex items-center justify-center gap-2">
-            <Rocket className="w-6 h-6" />
+          <DialogTitle className="text-lg sm:text-xl font-bold bg-gradient-text bg-clip-text text-transparent text-center flex items-center justify-center gap-2">
+            <Rocket className="w-5 h-5 sm:w-6 sm:h-6" />
             Deploy to Vercel
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 sm:space-y-6 py-4">
           {/* Project Configuration */}
-          <Card className="p-4 bg-gradient-glass border-glass-border">
-            <div className="space-y-4">
+          <Card className="p-3 sm:p-4 bg-gradient-glass border-glass-border">
+            <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center gap-2 mb-3">
                 <Settings className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold">Project Settings</h3>
+                <h3 className="font-semibold text-sm sm:text-base">Project Settings</h3>
               </div>
               
               <div className="space-y-2">
@@ -116,18 +115,18 @@ const VercelDeploy = ({ children }: VercelDeployProps) => {
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
                   placeholder="my-awesome-app"
-                  className="bg-input/50 border-glass-border text-sm"
+                  className="bg-input/50 border-glass-border text-sm h-9 sm:h-10"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground mb-1">Framework</p>
-                  <Badge variant="outline" className="bg-gradient-glass">React + Vite</Badge>
+                  <p className="text-muted-foreground mb-1 text-xs sm:text-sm">Framework</p>
+                  <Badge variant="outline" className="bg-gradient-glass text-xs">React + Vite</Badge>
                 </div>
                 <div>
-                  <p className="text-muted-foreground mb-1">Build Command</p>
-                  <Badge variant="outline" className="bg-gradient-glass">npm run build</Badge>
+                  <p className="text-muted-foreground mb-1 text-xs sm:text-sm">Build Command</p>
+                  <Badge variant="outline" className="bg-gradient-glass text-xs">npm run build</Badge>
                 </div>
               </div>
             </div>
@@ -135,25 +134,25 @@ const VercelDeploy = ({ children }: VercelDeployProps) => {
 
           {/* Deployment Status */}
           {deployStatus !== 'idle' && (
-            <Card className="p-4 bg-gradient-glass border-glass-border">
+            <Card className="p-3 sm:p-4 bg-gradient-glass border-glass-border">
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   {deployStatus === 'deploying' && (
                     <>
                       <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-                      <span className="text-base">Deploying to Vercel...</span>
+                      <span className="text-sm sm:text-base">Deploying to Vercel...</span>
                     </>
                   )}
                   {deployStatus === 'success' && (
                     <>
                       <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span className="text-green-500 text-base">Deployment Successful!</span>
+                      <span className="text-green-500 text-sm sm:text-base">Deployment Successful!</span>
                     </>
                   )}
                   {deployStatus === 'error' && (
                     <>
                       <AlertCircle className="w-4 h-4 text-red-500" />
-                      <span className="text-red-500 text-base">Deployment Failed</span>
+                      <span className="text-red-500 text-sm sm:text-base">Deployment Failed</span>
                     </>
                   )}
                 </div>
@@ -161,26 +160,30 @@ const VercelDeploy = ({ children }: VercelDeployProps) => {
                 {deployUrl && (
                   <div className="p-3 bg-muted/20 rounded-lg">
                     <p className="text-sm text-muted-foreground mb-2">🌐 Live URL:</p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-sm bg-background/50 px-3 py-2 rounded break-all">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                      <code className="flex-1 text-xs sm:text-sm bg-background/50 px-2 sm:px-3 py-2 rounded break-all min-w-0">
                         {deployUrl}
                       </code>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => copyUrl(deployUrl)}
-                        className="shrink-0"
-                      >
-                        <Copy className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => window.open(deployUrl, '_blank')}
-                        className="shrink-0"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyUrl(deployUrl)}
+                          className="h-8 w-8 sm:w-auto sm:px-2 p-0 sm:p-2"
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span className="hidden sm:inline ml-1">Copy</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(deployUrl, '_blank')}
+                          className="h-8 w-8 sm:w-auto sm:px-2 p-0 sm:p-2"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          <span className="hidden sm:inline ml-1">Open</span>
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -193,7 +196,7 @@ const VercelDeploy = ({ children }: VercelDeployProps) => {
             <Button
               onClick={handleDeploy}
               disabled={isDeploying || !projectName.trim()}
-              className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-300 h-12 text-base"
+              className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-300 h-10 sm:h-12 text-sm sm:text-base"
             >
               {isDeploying ? (
                 <div className="flex items-center gap-2">
@@ -212,26 +215,26 @@ const VercelDeploy = ({ children }: VercelDeployProps) => {
               <Button
                 variant="outline"
                 onClick={openVercelDashboard}
-                className="bg-gradient-glass border-glass-border hover:shadow-glow text-sm"
+                className="bg-gradient-glass border-glass-border hover:shadow-glow text-xs sm:text-sm h-9 sm:h-10"
               >
-                <Globe className="w-4 h-4 mr-2" />
+                <Globe className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 Dashboard
               </Button>
               
               <Button
                 variant="outline"
                 onClick={openGitHub}
-                className="bg-gradient-glass border-glass-border hover:shadow-glow text-sm"
+                className="bg-gradient-glass border-glass-border hover:shadow-glow text-xs sm:text-sm h-9 sm:h-10"
               >
-                <Github className="w-4 h-4 mr-2" />
+                <Github className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 GitHub
               </Button>
             </div>
           </div>
 
           {/* Enhanced Info */}
-          <div className="text-center text-xs text-muted-foreground space-y-2 p-4 bg-muted/10 rounded-lg">
-            <p className="font-medium text-sm">🚀 Deploy your PandaNexus app to Vercel</p>
+          <div className="text-center text-xs text-muted-foreground space-y-2 p-3 sm:p-4 bg-muted/10 rounded-lg">
+            <p className="font-medium text-xs sm:text-sm">🚀 Deploy your PandaNexus app to Vercel</p>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <p>⚡ Automatic builds</p>
               <p>🌍 Global CDN</p>

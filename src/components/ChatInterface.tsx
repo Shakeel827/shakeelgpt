@@ -10,7 +10,7 @@ import ContactDialog from "./ContactDialog";
 import CodeInterface from "./CodeInterface";
 import VercelDeploy from "./VercelDeploy";
 import { aiService, AIStreamChunk } from "@/services/aiService";
-import { Send, Plus, Copy, Code, MessageCircle, Rocket, Image, Sparkles, Menu, X, Zap, Brain, Cpu, Wand2 } from "lucide-react";
+import { Send, Plus, Copy, Code, MessageCircle, Rocket, Image, Sparkles, Menu, X, Zap, Brain, Cpu, Wand2, Square, Trash2 } from "lucide-react";
 import PandaLogo from "./PandaLogo";
 import { useTheme } from "./ThemeProvider";
 import { toast } from "@/components/ui/sonner";
@@ -31,7 +31,6 @@ type ServiceType = 'auto' | 'code' | 'creative' | 'knowledge' | 'general';
 const ChatInterface = () => {
   const { theme, toggleTheme } = useTheme();
   const [messages, setMessages] = useState<Message[]>(() => {
-    // Load messages from localStorage if available
     const savedMessages = localStorage.getItem('pandanexus-chat-history');
     if (savedMessages) {
       try {
@@ -45,11 +44,10 @@ const ChatInterface = () => {
       }
     }
     
-    // Default welcome message
     return [
       {
         id: '1',
-        content: "🚀 **Welcome to PandaNexus - The World's Most Revolutionary AI Platform!**\n\nI'm your quantum-powered AI companion, engineered by the genius Shakeel to deliver:\n\n• ⚡ **Lightning Responses** - Sub-millisecond AI interactions\n• 💻 **Code Studio Pro** - World's most advanced development environment\n• 🎨 **AI Art Engine** - Instant image generation and analysis\n• 🌐 **One-Click Deploy** - Deploy to Vercel in seconds\n• 🧠 **Multi-Modal Genius** - Text, code, and image mastery\n• 🔧 **Smart Spell Check** - AI-powered text optimization\n\nReady to build something that will shock the world? Let's create the impossible! 🌟",
+        content: "🚀 **Welcome to PandaNexus - World's Fastest AI Platform!**\n\nI'm your quantum-powered AI companion, engineered by Shakeel to deliver:\n\n• ⚡ **Lightning Responses** - Instant AI interactions\n• 💻 **Code Studio Pro** - Advanced development environment\n• 🎨 **AI Art Engine** - Instant image generation\n• 🌐 **One-Click Deploy** - Deploy to Vercel instantly\n• 🧠 **Multi-Modal Genius** - Text, code, and image mastery\n• 🔧 **Smart Spell Check** - AI-powered text optimization\n\nReady to build something revolutionary? Let's create the impossible! 🌟",
         role: 'assistant',
         timestamp: new Date(),
         model: 'PandaNexus Quantum Engine'
@@ -69,7 +67,7 @@ const ChatInterface = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Save messages to localStorage whenever they change
+  // Save messages to localStorage
   useEffect(() => {
     localStorage.setItem('pandanexus-chat-history', JSON.stringify(messages));
   }, [messages]);
@@ -80,21 +78,20 @@ const ChatInterface = () => {
 
   useEffect(scrollToBottom, [messages]);
 
-  // Auto-switch to Code Studio when code service is selected
+  // Auto-switch to Code Studio
   useEffect(() => {
     if (selectedService === 'code') {
       const timer = setTimeout(() => {
         setShowCodeInterface(true);
-        toast.success("🚀 Code Studio Activated!", {
-          description: "Welcome to the world's most advanced coding environment",
-          duration: 3000,
+        toast.success("🚀 Code Studio Pro Activated!", {
+          description: "World's most advanced coding environment",
+          duration: 2000,
         });
-      }, 500);
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [selectedService]);
 
-  // Show code interface
   if (showCodeInterface) {
     return <CodeInterface onBack={() => {
       setShowCodeInterface(false);
@@ -102,7 +99,7 @@ const ChatInterface = () => {
     }} />;
   }
 
-  // ULTRA-FAST FILE UPLOAD with instant preview
+  // Ultra-fast file upload
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -119,9 +116,9 @@ const ChatInterface = () => {
           image: imageUrl
         };
         setMessages(prev => [...prev, fileMessage]);
-        toast.success("Image uploaded instantly!", {
-          description: "AI will analyze your image with superhuman precision",
-          duration: 2000,
+        toast.success("📸 Image uploaded!", {
+          description: "AI will analyze with superhuman precision",
+          duration: 1500,
         });
       };
       reader.readAsDataURL(file);
@@ -131,14 +128,14 @@ const ChatInterface = () => {
         const content = e.target?.result as string;
         const fileMessage: Message = {
           id: Date.now().toString(),
-          content: `📄 **File Content Analyzed:**\n\`\`\`\n${content.slice(0, 2000)}${content.length > 2000 ? '\n... (truncated)' : ''}\n\`\`\``,
+          content: `📄 **File Analyzed:**\n\`\`\`\n${content.slice(0, 1500)}${content.length > 1500 ? '\n... (truncated)' : ''}\n\`\`\``,
           role: 'user',
           timestamp: new Date()
         };
         setMessages(prev => [...prev, fileMessage]);
-        toast.success("File processed instantly!", {
+        toast.success("📁 File processed!", {
           description: "Content ready for AI analysis",
-          duration: 2000,
+          duration: 1500,
         });
       };
       reader.readAsText(file);
@@ -149,47 +146,70 @@ const ChatInterface = () => {
     }
   };
 
-  // REVOLUTIONARY AI SPELL CHECK
+  // Revolutionary AI spell check
   const handleSpellCheck = async () => {
     if (!inputValue.trim() || isSpellChecking) return;
     
     const originalText = inputValue;
     setIsSpellChecking(true);
-    setInputValue("✨ AI optimizing your text...");
+    setInputValue("✨ AI optimizing...");
     
     try {
       const correctedText = await aiService.spellCheck(originalText);
       setInputValue(correctedText);
       
       if (correctedText !== originalText) {
-        toast.success("🎯 Text perfected by AI!", {
-          description: "Grammar, spelling, and clarity optimized",
-          duration: 2000,
+        toast.success("🎯 Text perfected!", {
+          description: "Grammar and clarity optimized",
+          duration: 1500,
         });
       } else {
-        toast.info("✅ Your text is already perfect!", {
+        toast.info("✅ Perfect already!", {
           description: "No improvements needed",
-          duration: 1500,
+          duration: 1000,
         });
       }
     } catch (error) {
       console.error("Spell check failed:", error);
       setInputValue(originalText);
-      toast.error("Spell check temporarily unavailable", {
-        description: "Please try again in a moment",
-        duration: 2000,
-      });
+      toast.error("Spell check unavailable");
     } finally {
       setIsSpellChecking(false);
-      // Refocus input
-      setTimeout(() => inputRef.current?.focus(), 100);
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
   };
 
-  // REVOLUTIONARY STREAMING MESSAGE SYSTEM
+  // Stop/Cancel streaming
+  const handleStopStreaming = () => {
+    if (isLoading && streamingMessageId) {
+      aiService.cancelRequest();
+      setIsLoading(false);
+      setStreamingMessageId(null);
+      
+      // Update the streaming message to show it was stopped
+      setMessages(prev => prev.map(msg => 
+        msg.id === streamingMessageId 
+          ? { ...msg, content: msg.content + '\n\n⏹️ **Stopped by user**', isStreaming: false }
+          : msg
+      ));
+      
+      toast.info("⏹️ Streaming stopped", {
+        description: "Request cancelled successfully",
+        duration: 1500,
+      });
+    }
+  };
+
+  // Ultra-fast streaming submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isLoading) return;
+    if (!inputValue.trim() || (isLoading && !streamingMessageId)) return;
+
+    // If currently streaming, stop it
+    if (isLoading && streamingMessageId) {
+      handleStopStreaming();
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -198,12 +218,11 @@ const ChatInterface = () => {
       timestamp: new Date()
     };
 
-    // Add user message to chat history
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
 
-    // Create streaming message placeholder
+    // Create streaming message
     const streamingId = (Date.now() + 1).toString();
     setStreamingMessageId(streamingId);
     
@@ -215,29 +234,26 @@ const ChatInterface = () => {
       isStreaming: true
     };
     
-    // Add streaming message to chat history
     setMessages(prev => [...prev, streamingMessage]);
 
     try {
-      // Use only the last few messages to avoid context overload
-      const recentMessages = messages.slice(-10); // Last 5 exchanges
+      const recentMessages = messages.slice(-8);
       const conversationHistory = [...recentMessages, userMessage].map(m => ({
         role: m.role,
         content: m.content,
         image: m.image
       }));
 
-      console.log('🚀 Starting quantum-speed streaming...');
+      console.log('🚀 Quantum streaming activated...');
       let streamedContent = '';
-      let responseModel = 'Llama 3.1 8B';
+      let responseModel = 'PandaNexus-Pro';
 
-      // Define the onChunk callback function
       const onChunkCallback = (chunk: AIStreamChunk) => {
         if (chunk.error) {
           console.error("Stream error:", chunk.error);
           setMessages(prev => prev.map(msg => 
             msg.id === streamingId 
-              ? { ...msg, content: chunk.chunk || 'An error occurred', isStreaming: false }
+              ? { ...msg, content: chunk.chunk || 'Connection error occurred', isStreaming: false }
               : msg
           ));
           setIsLoading(false);
@@ -257,7 +273,7 @@ const ChatInterface = () => {
               : msg
           ));
         } else {
-          // Check if this was an image generation
+          // Check for image generation
           const isImageGen = /generate.*image|create.*image|make.*image|draw|picture|photo|art|visual/i.test(userMessage.content);
           let imageUrl = '';
           
@@ -266,7 +282,6 @@ const ChatInterface = () => {
             imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Date.now()}&enhance=true&model=flux`;
           }
           
-          // Finalize the message
           setMessages(prev => prev.map(msg => 
             msg.id === streamingId 
               ? { 
@@ -281,30 +296,29 @@ const ChatInterface = () => {
           setIsLoading(false);
           setStreamingMessageId(null);
           
-          toast.success("🎉 Response completed!", {
-            description: `Powered by ${responseModel} - Lightning fast!`,
-            duration: 2000,
+          toast.success("🎉 Response complete!", {
+            description: `${responseModel} - Lightning speed!`,
+            duration: 1500,
           });
         }
       };
 
-      // Call the streaming service with the properly defined callback
       await aiService.sendMessageStream(
         conversationHistory, 
+        selectedService,
         onChunkCallback
       );
       
     } catch (error) {
       console.error("Chat error:", error);
       
-      // Remove the streaming message on error
       setMessages(prev => prev.filter(msg => msg.id !== streamingId));
       setIsLoading(false);
       setStreamingMessageId(null);
       
       toast.error("Failed to send message", {
-        description: "Please try again or check your connection.",
-        duration: 3000,
+        description: "Please check API connection",
+        duration: 2000,
       });
     }
   };
@@ -314,36 +328,34 @@ const ChatInterface = () => {
       await navigator.clipboard.writeText(content);
       toast.success("📋 Copied!", {
         description: "Message copied to clipboard",
-        duration: 1500,
+        duration: 1000,
       });
     } catch (err) {
       console.error('Failed to copy:', err);
-      toast.error("Copy failed", {
-        description: "Please select and copy manually",
-        duration: 2000,
-      });
+      toast.error("Copy failed");
     }
   };
 
   const handleQuickAction = (action: string) => {
     setInputValue(action);
-    setTimeout(() => inputRef.current?.focus(), 100);
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
+  // Clear chat properly
   const clearChat = () => {
-    // Keep only the welcome message
     setMessages([
       {
         id: '1',
-        content: "🚀 **Chat cleared! Ready for your next world-changing project!**\n\nWhat incredible creation shall we build together?",
+        content: "🧹 **Chat cleared! Ready for your next revolutionary project!**\n\nWhat incredible creation shall we build together?",
         role: 'assistant',
         timestamp: new Date(),
         model: 'PandaNexus Fresh Start'
       }
     ]);
+    aiService.clearCache();
     toast.success("🧹 Chat cleared!", {
-      description: "Ready for your next amazing project",
-      duration: 2000,
+      description: "Ready for your next project",
+      duration: 1500,
     });
   };
 
@@ -351,54 +363,54 @@ const ChatInterface = () => {
     <div className="flex flex-col h-screen bg-background overflow-hidden">
       {/* ULTRA-RESPONSIVE HEADER */}
       <Card className="border-0 border-b border-glass-border bg-gradient-glass backdrop-blur-xl shrink-0 shadow-glow">
-        <div className="flex items-center justify-between p-3 md:p-4">
-          {/* Logo and Title - Mobile Optimized */}
+        <div className="flex items-center justify-between p-2 sm:p-3 md:p-4">
+          {/* Logo and Title */}
           <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
             <div className="relative">
-              <PandaLogo className="w-8 h-8 md:w-10 md:h-10 shrink-0" animate />
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-glow"></div>
+              <PandaLogo className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 shrink-0" animate />
+              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-glow"></div>
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-lg md:text-xl font-bold bg-gradient-text bg-clip-text text-transparent truncate flex items-center gap-1">
+              <h1 className="text-base sm:text-lg md:text-xl font-bold bg-gradient-text bg-clip-text text-transparent truncate flex items-center gap-1">
                 PandaNexus
-                <Zap className="w-4 h-4 md:w-5 md:h-5 text-primary animate-pulse" />
+                <Zap className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-primary animate-pulse" />
               </h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">World's Fastest AI • Quantum Speed • Revolutionary</p>
+              <p className="text-xs text-muted-foreground hidden sm:block">World's Fastest AI • Quantum Speed</p>
             </div>
           </div>
 
-          {/* Performance Indicators - Desktop */}
+          {/* Performance Indicators */}
           <div className="hidden lg:flex items-center gap-2 mr-4">
             <Badge variant="outline" className="bg-gradient-glass border-glass-border text-xs animate-pulse">
               <Brain className="w-3 h-3 mr-1 text-green-500" />
-              Quantum Mode
+              Quantum
             </Badge>
             <Badge variant="outline" className="bg-gradient-glass border-glass-border text-xs">
               <Cpu className="w-3 h-3 mr-1 text-blue-500" />
-              {isLoading ? 'Processing' : 'Ready'}
+              {isLoading ? 'Streaming' : 'Ready'}
             </Badge>
           </div>
 
           {/* Desktop Actions */}
-          <div className="hidden md:flex items-center gap-2 shrink-0">
+          <div className="hidden md:flex items-center gap-1 lg:gap-2 shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowCodeInterface(true)}
-              className="bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-300 text-xs"
+              className="bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-300 text-xs h-8 px-2 lg:px-3"
             >
-              <Code className="w-4 h-4 mr-1" />
-              Code Studio Pro
+              <Code className="w-3 h-3 lg:w-4 lg:h-4 lg:mr-1" />
+              <span className="hidden lg:inline">Code Studio</span>
             </Button>
             
             <VercelDeploy>
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-300 text-xs"
+                className="bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-300 text-xs h-8 px-2 lg:px-3"
               >
-                <Rocket className="w-4 h-4 mr-1" />
-                Deploy
+                <Rocket className="w-3 h-3 lg:w-4 lg:h-4 lg:mr-1" />
+                <span className="hidden lg:inline">Deploy</span>
               </Button>
             </VercelDeploy>
             
@@ -406,10 +418,10 @@ const ChatInterface = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-300 text-xs"
+                className="bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-300 text-xs h-8 px-2 lg:px-3"
               >
-                <MessageCircle className="w-4 h-4 mr-1" />
-                Contact
+                <MessageCircle className="w-3 h-3 lg:w-4 lg:h-4 lg:mr-1" />
+                <span className="hidden lg:inline">Contact</span>
               </Button>
             </ContactDialog>
             
@@ -417,9 +429,10 @@ const ChatInterface = () => {
               variant="outline"
               size="sm"
               onClick={clearChat}
-              className="bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-300 text-xs"
+              className="bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-300 text-xs h-8 px-2 lg:px-3"
             >
-              🧹 Clear
+              <Trash2 className="w-3 h-3 lg:w-4 lg:h-4 lg:mr-1" />
+              <span className="hidden lg:inline">Clear</span>
             </Button>
             
             <Button
@@ -453,62 +466,65 @@ const ChatInterface = () => {
           </div>
         </div>
 
-        {/* Mobile Menu - Enhanced */}
+        {/* Enhanced Mobile Menu */}
         {showMobileMenu && (
           <div className="md:hidden border-t border-glass-border p-3 space-y-2 bg-gradient-glass backdrop-blur-xl">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setShowCodeInterface(true);
-                setShowMobileMenu(false);
-              }}
-              className="w-full justify-start bg-gradient-glass border-glass-border text-sm hover:shadow-glow"
-            >
-              <Code className="w-4 h-4 mr-2" />
-              🚀 Code Studio Pro
-            </Button>
-            
-            <VercelDeploy>
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full justify-start bg-gradient-glass border-glass-border text-sm hover:shadow-glow"
-                onClick={() => setShowMobileMenu(false)}
+                onClick={() => {
+                  setShowCodeInterface(true);
+                  setShowMobileMenu(false);
+                }}
+                className="justify-start bg-gradient-glass border-glass-border text-sm hover:shadow-glow h-10"
               >
-                <Rocket className="w-4 h-4 mr-2" />
-                ⚡ Deploy to Vercel
+                <Code className="w-4 h-4 mr-2" />
+                Code Studio
               </Button>
-            </VercelDeploy>
-            
-            <ContactDialog>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start bg-gradient-glass border-glass-border text-sm hover:shadow-glow"
-                onClick={() => setShowMobileMenu(false)}
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                💬 Contact Shakeel
-              </Button>
-            </ContactDialog>
+              
+              <VercelDeploy>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-start bg-gradient-glass border-glass-border text-sm hover:shadow-glow h-10"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <Rocket className="w-4 h-4 mr-2" />
+                  Deploy
+                </Button>
+              </VercelDeploy>
+              
+              <ContactDialog>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-start bg-gradient-glass border-glass-border text-sm hover:shadow-glow h-10"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Contact
+                </Button>
+              </ContactDialog>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                clearChat();
-                setShowMobileMenu(false);
-              }}
-              className="w-full justify-start bg-gradient-glass border-glass-border text-sm hover:shadow-glow"
-            >
-              🧹 Clear Chat
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  clearChat();
+                  setShowMobileMenu(false);
+                }}
+                className="justify-start bg-gradient-glass border-glass-border text-sm hover:shadow-glow h-10"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear Chat
+              </Button>
+            </div>
           </div>
         )}
         
-        {/* Service Selector - Always Visible */}
-        <div className="px-3 md:px-4 pb-3">
+        {/* Service Selector */}
+        <div className="px-2 sm:px-3 md:px-4 pb-2 sm:pb-3">
           <ServiceSelector
             selectedService={selectedService}
             onServiceChange={setSelectedService}
@@ -518,7 +534,7 @@ const ChatInterface = () => {
       </Card>
 
       {/* ULTRA-FAST MESSAGES AREA */}
-      <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 min-h-0">
+      <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-2 md:space-y-3 min-h-0">
         {messages.map((message) => (
           <div key={message.id} className="relative group">
             {message.isStreaming ? (
@@ -533,7 +549,7 @@ const ChatInterface = () => {
               variant="ghost"
               size="sm"
               onClick={() => copyMessage(message.content)}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 h-7 w-7 p-0 bg-gradient-glass border border-glass-border hover:shadow-glow rounded-full"
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 h-6 w-6 p-0 bg-gradient-glass border border-glass-border hover:shadow-glow rounded-full"
             >
               <Copy className="w-3 h-3" />
             </Button>
@@ -544,15 +560,15 @@ const ChatInterface = () => {
 
       {/* REVOLUTIONARY INPUT SYSTEM */}
       <Card className="border-0 border-t border-glass-border bg-gradient-glass backdrop-blur-xl m-2 md:m-4 md:mt-0 shrink-0 shadow-glow">
-        <form onSubmit={handleSubmit} className="p-3 md:p-4 space-y-3">
-          {/* LIGHTNING QUICK ACTIONS - Mobile Optimized */}
+        <form onSubmit={handleSubmit} className="p-2 sm:p-3 md:p-4 space-y-2 sm:space-y-3">
+          {/* LIGHTNING QUICK ACTIONS */}
           <div className="flex gap-1 md:gap-2 overflow-x-auto pb-1 scrollbar-hide">
             {[
               { text: "Build React app", icon: Code, color: "text-blue-500", mobile: "React" },
               { text: "Generate AI image", icon: Image, color: "text-purple-500", mobile: "Image" },
               { text: "Debug my code", icon: Zap, color: "text-yellow-500", mobile: "Debug" },
               { text: "Deploy to Vercel", icon: Rocket, color: "text-green-500", mobile: "Deploy" },
-              { text: "Optimize performance", icon: Brain, color: "text-pink-500", mobile: "Optimize" },
+              { text: "Optimize code", icon: Brain, color: "text-pink-500", mobile: "Optimize" },
               { text: "Create API", icon: Cpu, color: "text-cyan-500", mobile: "API" }
             ].map(action => (
               <Button
@@ -561,7 +577,7 @@ const ChatInterface = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickAction(action.text)}
-                className="text-xs whitespace-nowrap bg-gradient-glass border-glass-border hover:shadow-glow shrink-0 h-8 px-3 transition-all duration-200"
+                className="text-xs whitespace-nowrap bg-gradient-glass border-glass-border hover:shadow-glow shrink-0 h-7 sm:h-8 px-2 sm:px-3 transition-all duration-200"
               >
                 <action.icon className={`w-3 h-3 mr-1 ${action.color}`} />
                 <span className="hidden sm:inline">{action.text}</span>
@@ -585,28 +601,32 @@ const ChatInterface = () => {
               variant="outline"
               size="icon"
               onClick={() => fileInputRef.current?.click()}
-              className="shrink-0 h-10 w-10 bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-200"
+              className="shrink-0 h-9 sm:h-10 w-9 sm:w-10 bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-200"
               title="Upload file or image"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
 
-            {/* LIGHTNING INPUT FIELD */}
+            {/* INPUT FIELD */}
             <div className="flex-1 min-w-0">
               <Input
                 ref={inputRef}
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 placeholder="Ask PandaNexus anything... ⚡ World's fastest AI!"
-                className="bg-input/50 border-glass-border backdrop-blur-sm focus:ring-2 focus:ring-primary/20 h-10 text-sm md:text-base transition-all duration-200 font-medium"
-                disabled={isLoading || isSpellChecking}
+                className="bg-input/50 border-glass-border backdrop-blur-sm focus:ring-2 focus:ring-primary/20 h-9 sm:h-10 text-sm md:text-base transition-all duration-200 font-medium"
+                disabled={isSpellChecking}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleSubmit(e as any);
                   }
                   if (e.key === 'Escape') {
-                    setInputValue('');
+                    if (isLoading) {
+                      handleStopStreaming();
+                    } else {
+                      setInputValue('');
+                    }
                   }
                 }}
               />
@@ -618,28 +638,33 @@ const ChatInterface = () => {
               onClick={handleSpellCheck}
               variant="outline"
               size="icon"
-              disabled={isLoading || !inputValue.trim() || isSpellChecking}
-              className="shrink-0 h-10 w-10 bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-200"
+              disabled={!inputValue.trim() || isSpellChecking}
+              className="shrink-0 h-9 sm:h-10 w-9 sm:w-10 bg-gradient-glass border-glass-border hover:shadow-glow transition-all duration-200"
               title="AI Spell Check & Optimization"
             >
               {isSpellChecking ? (
-                <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
               ) : (
-                <Wand2 className="w-4 h-4" />
+                <Wand2 className="w-3 h-3 sm:w-4 sm:h-4" />
               )}
             </Button>
 
-            {/* ULTRA-FAST SEND */}
+            {/* SEND/STOP BUTTON */}
             <Button
               type="submit"
-              disabled={isLoading || !inputValue.trim() || isSpellChecking}
-              className="bg-gradient-primary hover:shadow-glow transition-all duration-300 shrink-0 h-10 w-10 relative overflow-hidden"
+              disabled={isSpellChecking}
+              className={`transition-all duration-300 shrink-0 h-9 sm:h-10 w-9 sm:w-10 relative overflow-hidden ${
+                isLoading 
+                  ? 'bg-red-500 hover:bg-red-600' 
+                  : 'bg-gradient-primary hover:shadow-glow'
+              }`}
+              title={isLoading ? "Stop streaming" : "Send message"}
             >
               {isLoading ? (
-                <div className="w-4 h-4 border-2 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin"></div>
+                <Square className="w-3 h-3 sm:w-4 sm:h-4" />
               ) : (
                 <>
-                  <Send className="w-4 h-4 relative z-10" />
+                  <Send className="w-3 h-3 sm:w-4 sm:h-4 relative z-10" />
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer"></div>
                 </>
               )}
@@ -647,20 +672,20 @@ const ChatInterface = () => {
           </div>
           
           {/* ENHANCED HELPER TEXT */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="flex items-center gap-1">
                 ⚡ <span className="hidden xs:inline">Lightning AI</span><span className="xs:hidden">Fast</span>
               </span>
               <span className="hidden sm:inline flex items-center gap-1">
-                • 🔥 <span className="hidden md:inline">Real-time streaming</span><span className="md:hidden">Streaming</span>
+                • 🔥 <span className="hidden md:inline">Real-time streaming</span><span className="md:hidden">Live</span>
               </span>
               <span className="hidden md:inline">• 🚀 Instant deploy</span>
-              <span className="hidden lg:inline">• 🧠 Quantum intelligence</span>
             </div>
             <div className="flex items-center gap-1">
               <kbd className="px-1.5 py-0.5 bg-muted/20 rounded text-xs border border-glass-border">Enter</kbd>
               <span className="hidden sm:inline">send</span>
+              <span className="text-xs ml-2">ESC stop</span>
             </div>
           </div>
         </form>

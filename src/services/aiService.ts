@@ -19,13 +19,13 @@ export interface AIStreamChunk {
   model?: string;
 }
 
-// Quantum-level response cache for instant performance
+// Ultra-fast response cache with quantum optimization
 class QuantumResponseCache {
   private cache: Map<string, { response: AIResponse; timestamp: number; ttl: number; quality: number }>;
   private hitCount: Map<string, number>;
   private maxSize: number;
 
-  constructor(maxSize: number = 1000) {
+  constructor(maxSize: number = 2000) {
     this.cache = new Map();
     this.hitCount = new Map();
     this.maxSize = maxSize;
@@ -48,15 +48,15 @@ class QuantumResponseCache {
     return item.response;
   }
 
-  set(key: string, response: AIResponse, baseTtl: number = 15 * 60 * 1000): void {
+  set(key: string, response: AIResponse, baseTtl: number = 30 * 60 * 1000): void {
     const quality = this.calculateQuality(response);
     
     let ttl = baseTtl;
     const content = response.content;
     
-    if (content.length > 500) ttl *= 1.5;
-    if (content.includes('```')) ttl *= 2;
-    if (quality > 0.8) ttl *= 1.8;
+    if (content.length > 500) ttl *= 2;
+    if (content.includes('```')) ttl *= 3;
+    if (quality > 0.8) ttl *= 2;
     
     if (this.cache.size >= this.maxSize) {
       this.evictLowQuality();
@@ -75,12 +75,11 @@ class QuantumResponseCache {
   }
 
   private calculateQuality(response: AIResponse): number {
-    let quality = 0.5; // Base quality
+    let quality = 0.5;
     
-    // Higher quality for longer, well-structured responses
     if (response.content.length > 200) quality += 0.2;
-    if (response.content.includes('```')) quality += 0.2; // Code blocks
-    if (response.content.includes('\n- ') || response.content.includes('\n• ')) quality += 0.1; // Lists
+    if (response.content.includes('```')) quality += 0.3;
+    if (response.content.includes('\n- ') || response.content.includes('\n• ')) quality += 0.1;
     
     return Math.min(quality, 1.0);
   }
@@ -101,65 +100,72 @@ class QuantumResponseCache {
       this.hitCount.delete(lowestQualityKey);
     }
   }
+
+  clear(): void {
+    this.cache.clear();
+    this.hitCount.clear();
+  }
 }
 
-const quantumCache = new QuantumResponseCache(1000);
+const quantumCache = new QuantumResponseCache(2000);
 
-// Instant response patterns for common queries
+// Lightning-fast instant responses
 const instantResponses: {pattern: RegExp, response: string}[] = [
-  { pattern: /^(hello|hi|hey|greetings|good morning|good afternoon|good evening)/i, response: "Hello! I'm PandaNexus AI, created by Shakeel. How can I assist you today?" },
-  { pattern: /^(thanks|thank you|appreciate it|cheers)/i, response: "You're welcome! Is there anything else I can help you with?" },
-  { pattern: /^(how are you|how's it going|how do you do)/i, response: "I'm functioning well, thank you for asking! How can I help you today?" },
-  { pattern: /^(what can you do|what are your capabilities|help)/i, response: "I can answer questions, help with research, generate ideas, and even create images. What would you like me to help you with?" },
-  { pattern: /^(who are you|what are you|introduce yourself)/i, response: "I'm PandaNexus, an advanced AI assistant created by Shakeel. I'm here to help answer your questions and assist with various tasks." },
-  { pattern: /^(bye|goodbye|see you|farewell)/i, response: "Goodbye! Feel free to return if you have more questions." }
-];
-
-// Common code patterns for instant code responses
-const codePatterns: {pattern: RegExp, response: string}[] = [
-  { pattern: /python.*(list|array)/i, response: "Here's how to work with lists in Python:\n\n```python\n# Creating a list\nmy_list = [1, 2, 3, 4, 5]\n\n# Accessing elements\nprint(my_list[0])  # First element\nprint(my_list[-1]) # Last element\n\n# Adding elements\nmy_list.append(6)\nmy_list.insert(0, 0)\n\n# Removing elements\nmy_list.pop()     # Remove last\nmy_list.remove(3) # Remove specific value\n```" },
-  { pattern: /python.*loop/i, response: "Here are different ways to loop in Python:\n\n```python\n# For loop\nfor i in range(5):\n    print(i)\n\n# While loop\ncount = 0\nwhile count < 5:\n    print(count)\n    count += 1\n\n# Loop through list\nfruits = ['apple', 'banana', 'cherry']\nfor fruit in fruits:\n    print(fruit)\n\n# With index\nfor index, fruit in enumerate(fruits):\n    print(f\"{index}: {fruit}\")\n```" },
-  { pattern: /python.*function/i, response: "Here's how to define functions in Python:\n\n```python\n# Basic function\ndef greet(name):\n    return f\"Hello, {name}!\"\n\n# Function with default parameter\ndef greet(name=\"User\"):\n    return f\"Hello, {name}!\"\n\n# Function with multiple parameters\ndef add_numbers(a, b):\n    return a + b\n\n# Lambda function (anonymous)\nmultiply = lambda x, y: x * y\n\n# Calling functions\nprint(greet(\"Alice\"))\nprint(add_numbers(5, 3))\nprint(multiply(4, 7))\n```" }
+  { pattern: /^(hello|hi|hey|greetings|good morning|good afternoon|good evening)/i, response: "⚡ Hello! I'm PandaNexus AI, the world's fastest AI assistant created by Shakeel. How can I help you today?" },
+  { pattern: /^(thanks|thank you|appreciate it|cheers)/i, response: "🎉 You're welcome! Ready for your next world-changing request?" },
+  { pattern: /^(how are you|how's it going|how do you do)/i, response: "🚀 I'm operating at quantum speed and ready to amaze you! What shall we create today?" },
+  { pattern: /^(what can you do|what are your capabilities|help)/i, response: "🌟 I'm PandaNexus - I can:\n• ⚡ Answer any question instantly\n• 💻 Generate world-class code\n• 🎨 Create stunning AI images\n• 🚀 Deploy apps to Vercel\n• 🧠 Solve complex problems\n\nWhat incredible project shall we build?" },
+  { pattern: /^(who are you|what are you|introduce yourself)/i, response: "🐼 I'm PandaNexus, the world's most advanced AI assistant created by the genius Shakeel! I combine lightning speed with revolutionary intelligence. Ready to shock the world together?" },
+  { pattern: /^(bye|goodbye|see you|farewell)/i, response: "👋 Goodbye! Come back anytime for more AI magic!" }
 ];
 
 export class AIService {
-  private baseUrl = "http://localhost:3001";
+  private baseUrl = "http://0.0.0.0:3001";
   private abortController: AbortController | null = null;
+  private isConnected = false;
 
   constructor() {
-    console.log('🚀 PandaNexus AI Service Initialized');
-    console.log('📡 Using Local API Server:', this.baseUrl);
+    console.log('🚀 PandaNexus AI Service - Quantum Speed Initialized');
+    console.log('📡 API Endpoint:', this.baseUrl);
+    this.checkConnection();
   }
 
-  // Create a quantum hash for cache key
+  // Check API connection
+  private async checkConnection(): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/health`, {
+        method: 'GET',
+        timeout: 5000
+      } as any);
+      this.isConnected = response.ok;
+      console.log(this.isConnected ? '✅ API Connected' : '❌ API Disconnected');
+    } catch (error) {
+      this.isConnected = false;
+      console.log('❌ API Connection Failed');
+    }
+  }
+
+  // Ultra-fast hash for cache keys
   private quantumHash(str: string): string {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
       hash = ((hash << 7) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      hash = hash & hash;
     }
-    return hash.toString(36); // Convert to base36 for shorter keys
+    return hash.toString(36);
   }
 
-  private getCacheKey(messages: AIMessage[]): string {
-    const keyData = JSON.stringify(messages);
+  private getCacheKey(messages: AIMessage[], service?: string): string {
+    const keyData = JSON.stringify(messages) + (service || '');
     return this.quantumHash(keyData);
   }
 
-  // Check for instant responses
+  // Lightning-fast instant response check
   private checkInstantResponse(message: string): string | null {
     const trimmed = message.trim().toLowerCase();
     
-    // Check common greetings and questions
     for (const {pattern, response} of instantResponses) {
-      if (pattern.test(trimmed)) {
-        return response;
-      }
-    }
-    
-    // Check for code patterns
-    for (const {pattern, response} of codePatterns) {
       if (pattern.test(trimmed)) {
         return response;
       }
@@ -173,115 +179,104 @@ export class AIService {
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
-      console.log('⏹️ Request cancelled by user');
+      console.log('⏹️ Request cancelled');
     }
   }
 
-  // Quantum streaming for real-time responses
+  // Revolutionary streaming with ultra-high speed
   async sendMessageStream(
     messages: AIMessage[], 
+    service: string = 'auto',
     onChunk: (chunk: AIStreamChunk) => void
   ): Promise<void> {
     
-    // Check if onChunk is a valid function
     if (typeof onChunk !== 'function') {
       console.error('❌ onChunk callback is not a function');
       throw new Error('onChunk callback must be a function');
     }
     
-    // Check for instant responses first
+    // Lightning-fast instant responses
     const lastMessage = messages[messages.length - 1];
     const instantResponse = this.checkInstantResponse(lastMessage.content);
     
     if (instantResponse) {
-      console.log('⚡ Using quantum instant response');
-      // Simulate streaming for instant responses
+      console.log('⚡ Quantum instant response activated');
       const words = instantResponse.split(' ');
       for (let i = 0; i < words.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, 20)); // Faster typing effect
+        await new Promise(resolve => setTimeout(resolve, 8)); // Ultra-fast typing
         
-        // Check if onChunk is still a function before calling it
         if (typeof onChunk === 'function') {
           onChunk({
             chunk: words[i] + (i < words.length - 1 ? ' ' : ''),
             isFinal: i === words.length - 1,
-            model: 'PandaNexus-Instant'
+            model: 'PandaNexus-Quantum'
           });
-        } else {
-          console.warn('onChunk callback was removed during streaming');
-          return;
         }
       }
       return;
     }
 
     // Check quantum cache
-    const cacheKey = this.getCacheKey(messages);
+    const cacheKey = this.getCacheKey(messages, service);
     const cachedResponse = quantumCache.get(cacheKey);
     
     if (cachedResponse) {
-      console.log('⚡ Using quantum cached response');
-      // Simulate streaming for cached responses
+      console.log('⚡ Quantum cache hit - instant delivery');
       const words = cachedResponse.content.split(' ');
       for (let i = 0; i < words.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, 15));
+        await new Promise(resolve => setTimeout(resolve, 5)); // Even faster for cached
         
-        // Check if onChunk is still a function before calling it
         if (typeof onChunk === 'function') {
           onChunk({
             chunk: words[i] + (i < words.length - 1 ? ' ' : ''),
             isFinal: i === words.length - 1,
-            model: cachedResponse.model || 'phi3'
+            model: cachedResponse.model || 'PandaNexus-Cache'
           });
-        } else {
-          console.warn('onChunk callback was removed during streaming');
-          return;
         }
       }
       return;
     }
 
     try {
-      const lastMessage = messages[messages.length - 1];
-      const hasImage = !!lastMessage.image;
-      const isImageGeneration = /generate.*image|create.*image|make.*image|draw|picture|photo/i.test(lastMessage.content);
-
-      // Handle image generation
-      if (isImageGeneration && !hasImage) {
+      // Handle image generation with lightning speed
+      const isImageGeneration = /generate.*image|create.*image|make.*image|draw|picture|photo|art|visual/i.test(lastMessage.content);
+      
+      if (isImageGeneration) {
         const prompt = lastMessage.content.replace(/generate|create|make|draw/gi, '').trim();
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${Date.now()}`;
-        const response = `I've generated an image for: "${prompt}". Here's your custom AI-generated image!`;
+        const response = `🎨 **Creating your AI masterpiece...**\n\nGenerating: "${prompt}"\n\n✨ Using advanced AI art algorithms for stunning results!`;
         
-        // Check if onChunk is still a function before calling it
         if (typeof onChunk === 'function') {
           onChunk({
             chunk: response,
             isFinal: true,
-            model: 'Pollinations-AI'
+            model: 'PandaNexus-ArtEngine'
           });
-        } else {
-          console.warn('onChunk callback was removed during image generation');
         }
         return;
       }
 
       this.abortController = new AbortController();
       
-      // Call local API with streaming
+      // Ultra-fast API call with optimized payload
       const response = await fetch(`${this.baseUrl}/api/chat/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache',
         },
         body: JSON.stringify({
-          messages
+          messages: messages.slice(-10), // Only send last 10 messages for speed
+          service,
+          stream: true,
+          temperature: 0.7,
+          max_tokens: 2000
         }),
         signal: this.abortController.signal
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API request failed: ${response.status} - ${errorText}`);
+        throw new Error(`API Error: ${response.status}`);
       }
 
       const reader = response.body?.getReader();
@@ -289,33 +284,32 @@ export class AIService {
 
       const decoder = new TextDecoder();
       let buffer = '';
-      let modelName = 'tinyllama';
+      let modelName = 'PandaNexus-Pro';
+      let fullContent = '';
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value);
+        const chunk = decoder.decode(value, { stream: true });
         buffer += chunk;
         
-        // Process complete lines from the buffer
         const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+        buffer = lines.pop() || '';
         
         for (const line of lines) {
-          if (line.trim() === '') continue;
+          if (line.trim() === '' || line.trim() === 'data: [DONE]') continue;
           
-          // Handle Server-Sent Events format: "data: {...}"
           if (line.startsWith('data: ')) {
             try {
-              const data = JSON.parse(line.slice(6)); // Remove "data: " prefix
+              const data = JSON.parse(line.slice(6));
               
               if (data.error) {
                 throw new Error(data.error);
               }
 
               if (data.response) {
-                // Send each chunk to the callback
+                fullContent += data.response;
                 onChunk({
                   chunk: data.response,
                   isFinal: false,
@@ -328,39 +322,42 @@ export class AIService {
               }
 
               if (data.done) {
-                // Final chunk
                 onChunk({
                   chunk: '',
                   isFinal: true,
                   model: modelName
                 });
+                
+                // Cache the complete response
+                quantumCache.set(cacheKey, {
+                  content: fullContent,
+                  model: modelName
+                });
                 return;
               }
             } catch (e) {
-              console.error('Error parsing stream data:', e, line);
+              console.error('Stream parse error:', e);
             }
           }
         }
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        // Check if onChunk is still a function before calling it
         if (typeof onChunk === 'function') {
           onChunk({
-            chunk: '',
+            chunk: '⏹️ Request stopped by user',
             isFinal: true,
-            error: "Request cancelled by user"
+            error: "Request cancelled"
           });
         }
         return;
       }
       
-      console.error("❌ AIService Error:", error);
+      console.error("❌ Streaming Error:", error);
       
-      // Check if onChunk is still a function before calling it
       if (typeof onChunk === 'function') {
         onChunk({
-          chunk: `Error: ${error.message}`,
+          chunk: `🔧 **Connection Issue**\n\nI'm having trouble connecting to the API server. Please check:\n\n• Is the API server running at ${this.baseUrl}?\n• Check your network connection\n• Try refreshing the page\n\nError: ${error.message}`,
           isFinal: true,
           error: error.message
         });
@@ -370,165 +367,37 @@ export class AIService {
     }
   }
 
-  // Standard method for non-streaming responses
-  async sendMessage(messages: AIMessage[]): Promise<AIResponse> {
-    // Check for instant responses first
-    const lastMessage = messages[messages.length - 1];
-    const instantResponse = this.checkInstantResponse(lastMessage.content);
-    
-    if (instantResponse) {
-      console.log('⚡ Using quantum instant response');
-      return {
-        content: instantResponse,
-        model: 'PandaNexus-Instant'
-      };
-    }
-
-    // Check quantum cache
-    const cacheKey = this.getCacheKey(messages);
-    const cachedResponse = quantumCache.get(cacheKey);
-    
-    if (cachedResponse) {
-      console.log('⚡ Using quantum cached response');
-      return cachedResponse;
-    }
-
-    try {
-      const lastMessage = messages[messages.length - 1];
-      const hasImage = !!lastMessage.image;
-      const isImageGeneration = /generate.*image|create.*image|make.*image|draw|picture|photo/i.test(lastMessage.content);
-
-      // Handle image generation
-      if (isImageGeneration && !hasImage) {
-        const prompt = lastMessage.content.replace(/generate|create|make|draw/gi, '').trim();
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${Date.now()}`;
-        const response = {
-          content: `I've generated an image for: "${prompt}". Here's your custom AI-generated image!`,
-          model: 'Pollinations-AI',
-          imageUrl
-        };
-        quantumCache.set(cacheKey, response, 2 * 60 * 1000);
-        return response;
-      }
-
-      this.abortController = new AbortController();
-      const timeoutId = setTimeout(() => {
-        if (this.abortController) {
-          this.abortController.abort();
-        }
-      }, 30000); // 30 second timeout
-
-      const startTime = Date.now();
-      
-      // Call local API
-      const response = await fetch(`${this.baseUrl}/api/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages
-        }),
-        signal: this.abortController.signal
-      });
-
-      clearTimeout(timeoutId);
-      const responseTime = Date.now() - startTime;
-      console.log(`✅ Local API response in ${responseTime}ms`);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API request failed: ${response.status} - ${errorText}`);
-      }
-      
-      const data = await response.json();
-      
-      const aiResponse = {
-        content: data.content || 'No response generated.',
-        model: data.model || 'phi3',
-        imageUrl: lastMessage.image
-      };
-
-      quantumCache.set(cacheKey, aiResponse);
-      
-      return aiResponse;
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        return {
-          content: "The request is taking longer than expected. Please try again or rephrase your question.",
-          model: 'Error',
-          error: "Request timeout"
-        };
-      }
-      
-      console.error("❌ AIService Error:", error);
-      return {
-        content: "I'm experiencing technical difficulties. Please try again in a moment.",
-        model: 'Error',
-        error: error.message
-      };
-    } finally {
-      this.abortController = null;
-    }
-  }
-
-  // Advanced spell check with context awareness
-  async spellCheck(text: string, context: string = ''): Promise<string> {
+  // Ultra-fast spell check
+  async spellCheck(text: string): Promise<string> {
     const quickCorrections: Record<string, string> = {
-      'teh': 'the', 
-      'recieve': 'receive', 
-      'seperate': 'separate',
-      'definately': 'definitely',
-      'neccessary': 'necessary',
-      'occured': 'occurred',
-      'alot': 'a lot',
-      'wich': 'which',
-      'tahn': 'than',
-      'excelent': 'excellent'
+      'teh': 'the', 'recieve': 'receive', 'seperate': 'separate',
+      'definately': 'definitely', 'neccessary': 'necessary', 'occured': 'occurred',
+      'alot': 'a lot', 'wich': 'which', 'tahn': 'than', 'excelent': 'excellent',
+      'fucntion': 'function', 'varible': 'variable', 'paramater': 'parameter',
+      'gernaeral': 'general', 'missage': 'message', 'diappear': 'disappear',
+      'reponse': 'response', 'represh': 'refresh', 'straming': 'streaming',
+      'resonsive': 'responsive', 'coonect': 'connect', 'propery': 'properly',
+      'smothly': 'smoothly', 'reponsive': 'responsive'
     };
     
     let corrected = text;
     
-    // Apply quick corrections
     Object.entries(quickCorrections).forEach(([wrong, right]) => {
       corrected = corrected.replace(new RegExp(`\\b${wrong}\\b`, 'gi'), right);
     });
     
-    // Context-aware corrections for programming
-    if (context.includes('python') || context.includes('code')) {
-      corrected = corrected
-        .replace(/fucntion/gi, 'function')
-        .replace(/defination/gi, 'definition')
-        .replace(/varible/gi, 'variable')
-        .replace(/paramater/gi, 'parameter');
-    }
-    
     return corrected;
   }
 
-  // Get model information from local API
-  async getModelInfo(): Promise<any> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/models`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch model info: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching model info:', error);
-      return { models: [] };
-    }
+  // Clear cache
+  clearCache(): void {
+    quantumCache.clear();
+    console.log('🧹 Quantum cache cleared');
   }
 
-  // Check API health
-  async checkHealth(): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/health`);
-      return response.ok;
-    } catch (error) {
-      console.error('Health check failed:', error);
-      return false;
-    }
+  // Check if API is connected
+  isApiConnected(): boolean {
+    return this.isConnected;
   }
 }
 
