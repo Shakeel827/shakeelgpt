@@ -258,7 +258,7 @@ export class AIService {
       this.abortController = new AbortController();
       
       // Ultra-fast API call with optimized payload
-      const response = await fetch(`${this.baseUrl}/api/chat/stream`, {
+      const response = await fetch(`${this.baseUrl}api/chat/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
