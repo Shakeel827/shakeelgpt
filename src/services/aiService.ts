@@ -133,7 +133,7 @@ export class AIService {
   // Check API connection
   private async checkConnection(): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/health`, {
+      const response = await fetch(`${this.baseUrl}api/health`, {
         method: 'GET',
         timeout: 5000
       } as any);
