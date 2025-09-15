@@ -120,7 +120,7 @@ const instantResponses: {pattern: RegExp, response: string}[] = [
 ];
 
 export class AIService {
-  private baseUrl = "http://127.0.0.1:8003/";
+  private baseUrl = "https://openrouter.ai/api/v1";
   private abortController: AbortController | null = null;
   private isConnected = false;
 
